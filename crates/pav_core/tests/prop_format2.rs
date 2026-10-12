@@ -129,7 +129,7 @@ fn format1_files_keep_their_revisions_through_the_source_model() {
     let golden = [
         ("BUILTIN/box", "prop1-501ba5dc44b112fd"),
         ("BUILTIN/crate", "prop1-464f1ac1ee324075"),
-        ("BUILTIN/bench", "prop1-6feb81dece124dfd"),
+        ("BUILTIN/bench", "prop1-1dec2d266aa7c89d"),
         ("BUILTIN/lantern", "prop1-fc44b95ee89f262e"),
     ];
     let mut assets: Vec<(PropAsset, &str)> =
@@ -328,6 +328,19 @@ fn extras_sockets_and_warnings_resolve() {
 }
 
 #[test]
+fn a_mirror_copy_overlaps_only_when_its_shape_does() {
+    let overlaps = |parts: &str| -> Vec<String> {
+        let text = format!(r##"{{"format":2,"name":"probe","unit":"cm","color":"#808080","parts":{{{parts}}}}}"##);
+        compiled("probe", &text).warnings.into_iter().filter(|w| w.code == "mirror_overlap").flat_map(|w| w.ids).collect()
+    };
+    // A blade's outline drawn off its origin mirrors to the other side.
+    let blade = r#""blade":{"type":"extrude","points":[[3,0],[18,0],[3,40]],"depth":2,"mirror":"x"}"#;
+    assert_eq!(overlaps(blade), Vec::<String>::new());
+    // A centred slab on the mirror plane lies on its copy.
+    assert_eq!(overlaps(r#""slab":{"type":"box","size":[10,2,10],"pos":[0,1,0],"mirror":"x"}"#), ["slab~x"]);
+}
+
+#[test]
 fn fixtures_lint_on_their_resolved_parts() {
     use pav_core::props::lint::{Options, lint};
     let lines = |name: &str| {
@@ -357,4 +370,40 @@ fn fixtures_lint_on_their_resolved_parts() {
         lines("probe_frames"),
         ["frame_turn: board_lean_x leans sideways, so its width turns front-to-back; use spin:90 or a vertical axis"]
     );
+}
+
+/// The object doc (`docs/ASSET_STUDIO.md`, what an agent reads first) names every key, shape,
+/// socket, look and op format 2 checks; its document reads, compiles clean and takes its patch.
+#[test]
+fn the_object_doc_names_every_checked_key() {
+    use pav_core::props::doc::SocketName;
+    use pav_core::props::lint::{Options, lint};
+    use pav_core::props::{LOOKS, OPS2, format2, patch_document};
+    let text = include_str!("../../../docs/ASSET_STUDIO.md");
+    let words: std::collections::BTreeSet<&str> = text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).collect();
+    let mut keys: Vec<&str> = Vec::new();
+    for rows in [format2::DOCUMENT_FIELDS, format2::NODE_FIELDS, format2::MATERIAL_FIELDS] {
+        keys.extend(rows.iter().map(|(key, _)| *key));
+    }
+    for (kind, fields, _) in format2::SHAPES {
+        keys.push(kind);
+        keys.extend(fields.iter());
+    }
+    keys.extend(OPS2.iter().map(|(op, _, _)| *op));
+    keys.extend(SocketName::NAMES);
+    keys.extend(LOOKS);
+    let missing: Vec<&str> = keys.into_iter().filter(|key| !words.contains(key)).collect();
+    assert!(missing.is_empty(), "ASSET_STUDIO.md never names {missing:?}");
+
+    let blocks: Vec<&str> = text.split("```json\n").skip(1).map(|block| block.split("```").next().unwrap()).collect();
+    assert!(blocks.iter().all(|block| block.trim_end().lines().count() == 1), "each example is one command line");
+    let create: serde_json::Value = serde_json::from_str(blocks[0]).unwrap();
+    assert_eq!(create["args"]["action"], "create");
+    let bench = read("the doc's bench", &create["args"]["asset"].to_string());
+    let def = PropDef::new(bench.clone()).unwrap();
+    assert!(lint(&def.compiled, &Options::default()).is_empty(), "the doc's bench is clean");
+    assert_eq!(def.bounds(1.0).size_cm(), "220x142x98", "the template bench's size");
+    let call: serde_json::Value = serde_json::from_str(blocks[1]).unwrap();
+    let patched = patch_document(&bench, &call["args"]["ops"], &get).unwrap_or_else(|issues| panic!("{}", render(&issues)));
+    assert!(patched.doc.parts.contains_key("arm") && !patched.doc.parts.contains_key("crossbar"));
 }
