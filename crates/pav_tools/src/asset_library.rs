@@ -3,6 +3,7 @@
 //! `asset_edit action=publish`, which writes a checked workshop asset into a pack with its index
 //! row and its review.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow, bail};
@@ -121,8 +122,8 @@ fn token_cap(category: Option<Category>) -> usize {
 }
 
 /// What keeps `def` out of `lib/<pack>` besides `check`'s findings: what retrieval needs (a
-/// description, a category, 2-6 tags), its token cap, references outside the library, and its
-/// source's licence.
+/// description, a category, 2-6 tags), its token cap, references outside the library, workshop
+/// materials, and its source's licence.
 pub fn gate(def: &PropDef, pack: &Pack) -> Vec<String> {
     let doc = &def.doc;
     let mut found = Vec::new();
@@ -147,6 +148,19 @@ pub fn gate(def: &PropDef, pack: &Pack) -> Vec<String> {
         if !library {
             found.push(format!("refs: {dep} is outside the library; publish it first and reference its LIB/ name"));
         }
+    }
+    // Workshop materials stay on the machine that made them; a library asset ships without them.
+    // Any mention counts: `mat`, the materials table, an inline material's `base`, `recolor`.
+    let text = doc.text();
+    let workshop: BTreeSet<&str> = text
+        .match_indices("MAT/workshop/")
+        .map(|(at, _)| {
+            let rest = &text[at..];
+            &rest[..rest.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '/')).unwrap_or(rest.len())]
+        })
+        .collect();
+    for name in workshop {
+        found.push(format!("materials: {name} is a workshop material; use a core MAT/ name or write it inline"));
     }
     if let Err(error) = source_allowed(doc.source.as_ref(), &pack.license) {
         found.push(format!("license: {error}"));
@@ -240,4 +254,36 @@ pub fn publish(
         result["note"] = json!("LIB/core is embedded: rebuild to load it");
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pav_core::props::Doc;
+
+    #[test]
+    fn library_assets_name_no_workshop_materials() {
+        let text = r##"{"format":2,"name":"post","unit":"cm","description":"A post.","category":"town","tags":["wood","post"],
+            "parts":{"post":{"type":"box","size":[10,100,10],"pos":[0,50,0],"mat":"MAT/workshop/mine"}}}"##;
+        let def = PropDef::new(Doc::read(text).unwrap()).unwrap();
+        let core = Pack {
+            pack: "core".into(),
+            title: "Core".into(),
+            license: "CC0-1.0".into(),
+            credit: "Test".into(),
+            source: "own".into(),
+            catalog: None,
+        };
+        let found = gate(&def, &core);
+        assert_eq!(found, ["materials: MAT/workshop/mine is a workshop material; use a core MAT/ name or write it inline"]);
+        // Through an inline material's base, too.
+        let based = text
+            .replace(r#""mat":"MAT/workshop/mine""#, r#""mat":"m""#)
+            .replace(r#""tags":["wood","post"],"#, r#""tags":["wood","post"],"materials":{"m":{"base":"MAT/workshop/other"}},"#);
+        let def = PropDef::new(Doc::read(&based).unwrap()).unwrap();
+        assert_eq!(
+            gate(&def, &core),
+            ["materials: MAT/workshop/other is a workshop material; use a core MAT/ name or write it inline"]
+        );
+    }
 }
