@@ -391,12 +391,16 @@ impl Sim {
         }
         let mut named: BTreeMap<String, EntityId> = BTreeMap::new();
         for o in &slot.def.objects {
-            if let Some(asset) = &o.asset {
-                let placed = crate::props::resolve_ref(asset)
-                    .and_then(|definition| {
-                        crate::prop_instance::PropInstance::new(asset, definition, o.scale, o.body == BodyKind::Fixed)
+            if o.asset.is_some() {
+                let placed = o
+                    .placed()
+                    .and_then(|(name, definition, params)| {
+                        crate::prop_instance::PropInstance::new(&name, definition, o.scale, o.body == BodyKind::Fixed)?
+                            .with_seed(o.seed)
+                            .with_patch(&o.patch)
+                            .with_params(&params)
                     })
-                    .and_then(|copy| copy.with_seed(o.seed).with_roles(o.roles.clone()))
+                    .and_then(|copy| copy.with_roles(o.roles.clone()))
                     .and_then(|copy| {
                         self.place_prop(copy, slot.place.point(o.pos), slot.place.quat() * o.local_rot(), Some(region))
                     });
@@ -494,8 +498,10 @@ impl Sim {
                     continue;
                 }
             };
-            let feet = slot.place.point(n.pos);
-            let dir = slot.place.rotate(Vec3::new(n.yaw.to_radians().sin(), 0.0, n.yaw.to_radians().cos()));
+            // A seated performer stands where its seat's `sit` socket puts it.
+            let (pos, yaw) = slot.def.seat_spot(n).ok().flatten().unwrap_or((n.pos, n.yaw));
+            let feet = slot.place.point(pos);
+            let dir = slot.place.rotate(Vec3::new(yaw.to_radians().sin(), 0.0, yaw.to_radians().cos()));
             let facing = dir.x.atan2(dir.z);
             let points = match &n.ai {
                 crate::ai::AiDef::Patrol { points, .. } | crate::ai::AiDef::Guard { points, .. } => {
@@ -1220,6 +1226,8 @@ impl Sim {
                     scale: e.prop.as_ref().map(|p| p.scale).unwrap_or(1.0),
                     seed: e.prop.as_ref().map(|p| p.seed).unwrap_or(0),
                     roles: e.prop.as_ref().map(|p| p.roles.clone()).unwrap_or_default(),
+                    params: e.prop.as_ref().map(|p| p.params.clone()).unwrap_or_default(),
+                    patch: e.prop.as_ref().map(|p| p.patch.clone()).unwrap_or_default(),
                     pos: (local * 1000.0).round() / 1000.0,
                     yaw: r1(yaw),
                     pitch: r1(pitch),
@@ -1260,6 +1268,7 @@ fn fresh_behavior(b: &crate::entity::Behavior) -> crate::entity::Behavior {
         Behavior::Rain { interval, max, area, height, .. } => {
             Behavior::Rain { interval: *interval, max: *max, area: *area, height: *height, timer: 0, spawned: Default::default() }
         }
+        Behavior::Catalogue(c) => Behavior::Catalogue(c.fresh()),
         other => other.clone(),
     }
 }
@@ -1319,6 +1328,21 @@ pub fn object_toml(o: &crate::room::ObjectDef) -> String {
         if !o.roles.is_empty() {
             let roles: Vec<String> = o.roles.iter().map(|(role, color)| format!("{role:?} = {color:?}")).collect();
             text.push_str(&format!("roles = {{ {} }}\n", roles.join(", ")));
+        }
+        if !o.params.is_empty() {
+            let params: Vec<String> = o
+                .params
+                .iter()
+                .map(|(name, value)| match value {
+                    serde_json::Value::String(choice) => format!("{name} = {choice:?}"),
+                    value => format!("{name} = {value}"),
+                })
+                .collect();
+            text.push_str(&format!("params = {{ {} }}\n", params.join(", ")));
+        }
+        if let Some(patch) = toml::Value::try_from(&o.patch).ok().filter(|_| !o.patch.is_empty()) {
+            // A TOML value displays inline: an array of inline tables.
+            text.push_str(&format!("patch = {patch}\n"));
         }
         return text;
     }

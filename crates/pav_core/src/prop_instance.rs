@@ -34,6 +34,13 @@ pub struct PropInstance {
     /// `props::DEFAULT_ROLES`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub roles: BTreeMap<String, String>,
+    /// A family's knob values (format-2 `params`), defaults left out.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub params: props::Params,
+    /// The patch ops its definition was made with (room objects' `patch`), kept so a saved room
+    /// writes them back.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patch: Vec<serde_json::Value>,
 }
 
 fn is_zero(seed: &u32) -> bool {
@@ -90,7 +97,16 @@ impl PropInstance {
         if props::leaf(&asset) != definition.doc.name {
             return Err("asset reference does not match its embedded definition".into());
         }
-        Ok(Self { asset, definition, scale, collide, seed: 0, roles: BTreeMap::new() })
+        Ok(Self {
+            asset,
+            definition,
+            scale,
+            collide,
+            seed: 0,
+            roles: BTreeMap::new(),
+            params: props::Params::new(),
+            patch: Vec::new(),
+        })
     }
 
     /// This copy's variant: chance, jitter and pick resolve with `seed`.
@@ -106,9 +122,23 @@ impl PropInstance {
         Ok(self)
     }
 
+    /// A family's knob values, checked against its definition (defaults are left out).
+    pub fn with_params(mut self, params: &props::Params) -> Result<Self, String> {
+        let params = self.definition.param_values(None, params)?;
+        self.definition.try_variant(&params, self.seed).map_err(|issues| issue::render(&issues))?;
+        self.params = params;
+        Ok(self)
+    }
+
+    /// Records the patch ops its definition was made with (see `props::patched`).
+    pub fn with_patch(mut self, patch: &[serde_json::Value]) -> Self {
+        self.patch = patch.to_vec();
+        self
+    }
+
     /// The parts this copy draws and collides with.
     pub fn parts(&self) -> Arc<CompiledProp> {
-        self.definition.variant(self.seed)
+        self.definition.variant_with(&self.params, self.seed)
     }
 
     pub fn frame(&self) -> PropFrame {
@@ -218,8 +248,9 @@ impl Sim {
         collide: bool,
         region: Option<RegionKey>,
     ) -> Result<EntityId, String> {
-        let definition = props::resolve_ref(asset)?;
-        self.place_prop(PropInstance::new(asset, definition, scale, collide)?, pos, rot, region)
+        // `NAME:preset` places a family's preset.
+        let (name, definition, params) = props::resolve_placed(asset, &props::Params::new())?;
+        self.place_prop(PropInstance::new(&name, definition, scale, collide)?.with_params(&params)?, pos, rot, region)
     }
 
     /// Place a prepared copy (its seed and palette set).
@@ -236,18 +267,23 @@ impl Sim {
         Ok(self.spawn(spawn))
     }
 
-    /// A copy's variant and palette: its parts and collision follow the seed.
+    /// A copy's variant, palette and knob values: its parts and collision follow them.
     pub fn restyle_prop(
         &mut self,
         id: EntityId,
         seed: Option<u32>,
         roles: Option<BTreeMap<String, String>>,
+        params: Option<&props::Params>,
     ) -> Result<(), String> {
         if let Some(roles) = &roles {
             validate_roles(roles)?;
         }
         let entity = self.state.entities.get_mut(id).ok_or_else(|| format!("no active entity {}", id.0))?;
         let prop = entity.prop.as_mut().ok_or_else(|| format!("entity {} is not a prop instance", id.0))?;
+        if let Some(params) = params {
+            let checked = prop.clone().with_seed(seed.unwrap_or(prop.seed)).with_params(params)?;
+            prop.params = checked.params;
+        }
         prop.seed = seed.unwrap_or(prop.seed);
         prop.roles = roles.unwrap_or_else(|| prop.roles.clone());
         entity.visual = Some(prop.visual());
@@ -285,14 +321,15 @@ impl Sim {
         for id in &ids {
             let entity = self.state.entities.get_mut(*id).unwrap();
             let prop = entity.prop.as_mut().unwrap();
-            prop.definition = definition.clone();
+            // A patched copy keeps its patch over the new revision.
+            prop.definition = props::patched(&definition, &prop.patch).unwrap_or_else(|_| definition.clone());
             entity.visual = Some(prop.visual());
             self.rebuild_prop_body(*id);
         }
         let mut count = ids.len();
         for dormant in self.state.world.dormant_entities.values_mut().flatten() {
             if let Some(prop) = dormant.entity.prop.as_mut().filter(|p| p.asset == name) {
-                prop.definition = definition.clone();
+                prop.definition = props::patched(&definition, &prop.patch).unwrap_or_else(|_| definition.clone());
                 dormant.entity.visual = Some(prop.visual());
                 count += 1;
             }

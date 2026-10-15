@@ -60,10 +60,12 @@ fn starts_a_word(text: &str, word: &str) -> bool {
     text.split(|c: char| !c.is_ascii_alphanumeric()).any(|w| w.starts_with(word))
 }
 
-/// Where `word` matches a row: in the leaf 5, a tag, socket or the category 3, the name 2, the
-/// description 1; 0 nowhere.
+/// Where `word` matches a row: the whole leaf 5.5 (`table` before `round_table`), in the leaf 5,
+/// a tag, socket or the category 3, the name 2, the description 1; 0 nowhere.
 fn field_score(row: &Row, leaf: &str, name: &str, desc: &str, word: &str) -> f32 {
-    if leaf.contains(word) {
+    if leaf == word {
+        5.5
+    } else if leaf.contains(word) {
         5.0
     } else if row.cat.starts_with(word)
         || row.tags.iter().any(|tag| tag.starts_with(word))
@@ -168,7 +170,7 @@ fn mesh(row: &Row) -> u32 {
 }
 
 /// `text` cut at a word to at most `max` bytes, with … when cut.
-fn cut(text: &str, max: usize) -> String {
+pub(crate) fn cut(text: &str, max: usize) -> String {
     if text.len() <= max {
         return text.into();
     }
@@ -244,7 +246,7 @@ pub fn build_index(root: &Path, folder: &Path, set: &str, old: &[Row]) -> Result
     if !local {
         // A store row must carry an admitted licence (§14 Q2); local packs are not store rows.
         for row in &rows {
-            if let Err(error) = rules::admitted(&row.src, "prop") {
+            if let Err(error) = rules::admitted(&row.src, "prop").and(rules::admitted(&row.licence, "prop")) {
                 bail!("{}: refused: {error}", row.name);
             }
         }
@@ -263,10 +265,14 @@ pub fn build_index(root: &Path, folder: &Path, set: &str, old: &[Row]) -> Result
 }
 
 /// `templates` or a pack: write the index.tsv of its folder under `root`, and for a committed
-/// pack the credits (`CREDITS.md`) too. `store` writes the store's generated files.
+/// pack the credits (`CREDITS.md`) too. `store` writes the store's generated files; `hall` the
+/// Library Hall room (`crate::hall`).
 pub(crate) fn reindex(root: &Path, target: &str) -> Result<Value> {
     if target == "store" {
         return crate::asset_library::write_store(root);
+    }
+    if target == "hall" {
+        return crate::hall::write();
     }
     let (folder, set) = match target {
         "templates" => (root.join("templates"), "BUILTIN".to_owned()),
@@ -386,25 +392,50 @@ fn nearest(hits: &[Hit], rows: &[Row], terms: &[Term]) -> (Vec<Row>, bool) {
     (out, related)
 }
 
-/// `shelf=prop`: the best entries, standard and checked rows with an admitted licence, by
-/// category, each `name size_cm` and its sockets; within about 1,500 tokens.
+/// `shelf=prop`: the foundations first (`store/foundations.tsv`), by archetype, each `name
+/// size_cm`, its sockets, knobs (`name=lo-hi` or `name=a/b`) and `:presets`; then the other
+/// standard and checked rows with an admitted licence, by category, each `name size_cm` and its
+/// sockets; within about 1,500 tokens.
 pub fn prop_shelf(rows: &[Row]) -> Value {
-    let mut by_cat: std::collections::BTreeMap<String, Vec<String>> = std::collections::BTreeMap::new();
+    use pav_core::props::doc::Param;
+    use std::collections::BTreeMap;
+    let sockets = |row: &Row| -> String { row.sockets.iter().map(|s| format!(" @{s}")).collect() };
+    let number = |x: f32| if x.fract() == 0.0 { format!("{}", x as i64) } else { format!("{x}") };
+    let mut foundations: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+    for foundation in rules::foundations() {
+        let mut line = foundation.id.to_owned();
+        if let Some(row) = rows.iter().find(|row| row.name == foundation.id) {
+            line.push_str(&format!(" {}{}", row.size_cm, sockets(row)));
+        }
+        if let Some(def) = props::get(foundation.id) {
+            for (name, param) in &def.doc.params {
+                let values = match param {
+                    Param::Range { range: [lo, hi], .. } => format!("{}-{}", number(*lo), number(*hi)),
+                    Param::Choices { choices, .. } => choices.join("/"),
+                };
+                line.push_str(&format!(" {name}={values}"));
+            }
+            line.extend(def.doc.presets.keys().map(|preset| format!(" :{preset}")));
+        }
+        foundations.entry(foundation.archetype).or_default().push(line);
+    }
+    let mut by_cat: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut entries: Vec<&Row> = rows
         .iter()
         .filter(|row| matches!(row.level.as_str(), "standard" | "checked"))
         .filter(|row| rules::admitted(&row.src, "prop").is_ok())
+        .filter(|row| rules::foundation(&row.name).is_none())
         .collect();
     entries.sort_by(|a, b| a.name.cmp(&b.name));
     for row in entries {
-        let sockets: String = row.sockets.iter().map(|s| format!(" @{s}")).collect();
         let cat = if row.cat.is_empty() { "other".to_owned() } else { row.cat.clone() };
-        by_cat.entry(cat).or_default().push(format!("{} {}{sockets}", row.name, row.size_cm));
+        by_cat.entry(cat).or_default().push(format!("{} {}{}", row.name, row.size_cm, sockets(row)));
     }
     json!({
+        "foundations": foundations,
+        "others": by_cat,
         "shelf": "prop",
-        "use": "standard = embedded (rooms and game data may name it), checked = on disk. asset_edit action=inspect name=X reads one; action=copy from=X name=y forks it; asset_spawn places it; assets find=words searches everything",
-        "entries": by_cat,
+        "use": "foundations: where each archetype starts, with knobs and :presets; place a variant with asset_spawn name=X:preset params={...} (rooms: asset = \"X:preset\"); techniques and examples in store/foundations.tsv. standard = embedded (rooms and game data may name it), checked = on disk. asset_edit action=inspect name=X reads one; action=copy from=X name=y forks it; assets find=words searches everything",
     })
 }
 
@@ -562,6 +593,8 @@ mod tests {
             tok,
             fid: "authored".into(),
             src: "own".into(),
+            licence: "CC0-1.0".into(),
+            method: "authored".into(),
             level: if name.starts_with("WORKSHOP/") { "workshop".into() } else { "standard".into() },
             tags: tags.split_whitespace().map(String::from).collect(),
             sockets: Vec::new(),
@@ -678,6 +711,9 @@ mod tests {
         assert_eq!(names(&ranked(rows.clone(), &local)), ["LIB/searchlocal/stake"]);
         assert_eq!(listing_row(&rows[1])[6], "wood fence @top");
         assert_eq!(rows[1].level, "checked", "a lint-clean, described, tagged editable row");
+        assert_eq!((rows[1].licence.as_str(), rows[1].method.as_str()), ("CC0-1.0", "authored"), "own work");
+        let text = std::fs::read_to_string(root.join("lib/searchpack/index.tsv")).unwrap();
+        assert!(text.contains("\town\tprop\tCC0-1.0\tauthored\tchecked\t"), "{text}");
         assert!(reindex(&root, "core").is_err(), "no lib/core under this root");
         let credits = std::fs::read_to_string(root.join("CREDITS.md")).unwrap();
         assert!(credits.contains("## LIB/searchpack: Stakes") && !credits.contains("searchlocal"), "{credits}");

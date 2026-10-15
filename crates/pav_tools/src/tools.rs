@@ -641,7 +641,7 @@ pub static TOOLS: &[Tool] = &[
             arg("similar", "string", "rank like this asset"),
             arg("limit", "integer", "rows per page (20, ≤100)"),
             arg("page", "integer", "page (1)"),
-            arg("reindex", "string", "templates, a pack or store"),
+            arg("reindex", "string", "templates, pack, store, hall"),
             arg("shelf", "string", "prop or clip"),
         ],
         run: crate::asset_search::t_assets,
@@ -688,6 +688,7 @@ pub static TOOLS: &[Tool] = &[
             arg("yaw", "number", "base rotation in degrees"),
             arg("scale", "number", "uniform preview scale"),
             arg("seed", "integer", "variant: chance, jitter, pick"),
+            arg("params", "object", "family knobs {\"height\":70}; or name=NAME:preset"),
             arg("views", "array", "true (front,right,back,iso), or sides and degrees"),
             arg("elevation", "number", "views: degrees above the horizon (20), or game"),
             arg("tile", "integer", "views: pixels per side (default 240)"),
@@ -730,7 +731,7 @@ pub static TOOLS: &[Tool] = &[
     },
     Tool {
         name: "creature_preview",
-        help: "View compiled creatures (skinned wings, baked clips) with the game's renderer; the game and other studios are preserved. action=open resumes or opens an empty stage. Select name, play/pause, scrub time, step frames, turntable, fit bounds; action=pose returns joints. capture/filmstrip share this stage. Uncompiled sources need creature_edit action=rebuild.",
+        help: "View compiled creatures with the game's renderer (other studios are kept). action=open resumes or opens a stage; select name, play/pause, scrub, step, turntable, fit; action=pose returns joints. Uncompiled sources need creature_edit action=rebuild.",
         args: &[
             arg("action", "string", "status | open | fit | close | play | pause | restart | pose"),
             arg("name", "string", "CREATURE/name or lowercase leaf"),
@@ -749,7 +750,7 @@ pub static TOOLS: &[Tool] = &[
     },
     Tool {
         name: "creature_status",
-        help: "Read asynchronous build jobs without waiting. States: queued, building, ready (saved, not yet published), published, failed, superseded. A published job has source revision, diff, timings, warnings and any live feedback ticket. Jobs belong to this session. No args lists recent jobs, authored assets and the preview.",
+        help: "Read this session's build jobs without waiting: queued, building, ready (saved, unpublished), published (revision, diff, timings, warnings, feedback ticket), failed or superseded. No args lists recent jobs, authored assets and the preview.",
         args: &[
             arg("job", "integer", "specific job id returned by creature_edit"),
             arg("name", "string", "filter jobs by creature name"),
@@ -770,6 +771,7 @@ pub static TOOLS: &[Tool] = &[
             arg("room", "string|integer|null", "room key or id to save with; null for none"),
             arg("seed", "integer", "variant: chance, jitter, pick"),
             arg("roles", "object", "theme colours {\"$wall\":\"#5a6b7c\"}"),
+            arg("params", "object", "family knobs {\"height\":70}; or name=NAME:preset"),
         ],
         run: crate::asset_preview_tools::t_asset_spawn,
     },
@@ -1572,11 +1574,8 @@ fn t_room_check(_: &mut Session, a: &Args) -> Result<Output> {
             let unknown: Vec<String> = d
                 .objects
                 .iter()
-                .filter_map(|o| {
-                    let asset = o.asset.as_ref()?;
-                    let error = pav_core::props::resolve_ref(asset).err();
-                    error.map(|error| format!("object '{}': {error}", o.name))
-                })
+                .filter(|o| o.asset.is_some())
+                .filter_map(|o| o.placed().err().map(|error| format!("object '{}': {error}", o.name)))
                 .collect();
             let mut out =
                 json!({ "ok": unknown.is_empty(), "name": d.name, "size": d.layout.extent(), "objects": d.objects.len() });

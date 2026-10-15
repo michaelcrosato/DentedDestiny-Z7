@@ -77,15 +77,48 @@ the change.
 Replies carry revision, size_cm (width x height x depth), changed_parts and new findings.
 action=inspect returns the document (resolved=true: every part after copies).
 
+## Families (params and presets)
+
+```json
+{"tool":"asset_edit","args":{"action":"patch","name":"fence","ops":[{"op":"set","fields":{"params.length":{"range":[100,300],"set":{"post.pos.0":0.5,"rail.size.0":1}},"params.pickets":{"range":[3,15],"int":true,"set":{"picket.array.count":1}},"params.broken":{"choices":["no","yes"],"set":{"picket.chance":[1,0.6]}},"presets.long":{"length":300,"pickets":13}}}]}}
+```
+
+A range param sets each target to value × factor; a choices param sets each target to that
+choice's value. The file's own values are the defaults, so a family is still a concrete asset:
+a range's targets must agree on one default (within 0.5 or 0.5%; the check names the factor that
+fits), and the first choice must match what the file writes. Targets are part.field paths
+(group.child.size.1, rail.array.span.0, materials.wood.color), never type, ref, mesh or
+attach.to: attach, mirror, array.span and chance place what depends on a size. At most 8 params,
+8 targets each, 8 choices, 16 presets; a document set (above) adds them.
+Place or show a variant by preset, knobs over it, or both: `asset_spawn name=x:long
+params={"broken":"yes"}`, `asset_preview name=x:low` (params=, seed=), a room's
+`asset = "LIB/core/x:low"` with `params = { height = 70 }`. Example:
+docs/asset_plan/examples/families/fence.f2.json.
+
+**Foundations.** `store/foundations.tsv` names a few standard props per archetype (table, seat,
+barrel, light, crate, weapon, stall) that transform into the rest; `assets shelf=prop` lists
+them first with their knobs and presets. Before making one of these, place a variant: a preset
+(`asset_spawn name=LIB/core/chair:stool`), knob values (`params={"height":45}`), a palette for
+its roles (`roles={"$accent":"#2f6fb0"}`) or a seed. Each row's transforms are tested examples
+and its `why` the technique to copy. Fork one when no knob reaches what you need. A copy of a
+core asset under its own name (`copy from=LIB/core/table name=table`) is its next revision: it
+keeps that asset's lineage, so publishing it back adds knobs without making it a fork of itself.
+
 ## Check and the rest
 
 `asset_edit action=check name=x [target=WxHxD]` (cm) lists all findings and a cost line. Faults:
-floating, below_floor, not_grounded, unit_suspect, size; judge on the sheet: poke, hidden,
-z_fight, mirror, tiny. A hang socket hangs the object from it; wall_mount puts its back (z 0) on
-the wall. Sheets also take views=[front,top,30], elevation= and tile=.
+floating, below_floor, not_grounded, unit_suspect, size, size_band, socket_missing; judge on the
+sheet: poke, hidden, z_fight, mirror, tiny. size_band: an object of a known archetype (the last
+word of its name in store/size_bands.tsv, else its first tag: table, chair, barrel, sword …) far
+outside its real size, e.g. a 32 cm table; the line gives a scale op. socket_missing: a weapon
+needs grip, a seat (chair, stool, bench, throne) sit. A hang socket hangs the object from it;
+wall_mount puts its back (z 0) on the wall. Sheets also take views=[front,top,30], elevation= and tile=.
 `asset_spawn action=add name=x pos=[x,y,z]` places a copy in the world. Saves go to
 assets/props/workshop/name.json; a metre template's copy is in metres: send
-{"op":"unit","to":"cm"} before centimetres.
+{"op":"unit","to":"cm"} before centimetres. `copy from=X` writes the fork's lineage:
+`"lineage":{"method":"edited","origin":"import","parents":["X@rev"],"license":"CC0-1.0","credit":"…"}`,
+with X's origin (`import` for an import, `agent` for own work), licence and credit; edits and
+publish keep it, a patch cannot set it, and a copy of a format-1 template stays format 1 without one.
 
 ## Names and tiers
 
@@ -121,6 +154,12 @@ It draws what a placed copy draws (parts, glow, lights; not `fx` particles). The
 variant (0 as authored; keep to a few seeds per asset); the palette colours `$roles`
 ({"$wall":"#5a6b7c"}); `id` keeps each unit's outline its own. Unknown names fail with the
 nearest one. Units need no physics: the game owns their positions.
+
+Characters use sockets through their looks and room data: a biped's
+`weapon = { kind = "staff", asset = "LIB/core/mage_staff" }` holds the object by its grip socket
+(+y along the weapon; the kind still sets reach and swings), and a room performer with
+`seat = "<object>"` sits on that object's sit socket (rooms/library_hall.toml). A room object's
+`patch = [ops]` places a one-off variant of an embedded asset (rooms/limits.toml).
 
 Scenery that never moves can instead be baked into the level's static regions
 (`statics::StaticProp`: no entity, one collider box, ~75 B in a snapshot); Shardfall dresses

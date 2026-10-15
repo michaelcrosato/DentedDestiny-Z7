@@ -62,7 +62,8 @@ fn the_store_finds_shelves_credits_and_refuses() {
     assert_eq!(barrel["cols"], "name cat size_cm tier mesh tok tags desc");
     let first = &barrel["rows"][0];
     assert_eq!((first[0].as_str().unwrap(), first[3].as_str().unwrap()), ("LIB/core/barrel", "standard"), "{barrel}");
-    assert!(barrel["rows"].as_array().unwrap().iter().any(|row| row[3] == "checked"), "{barrel}");
+    let table = call(&mut s, "assets", json!({"find": "table"}));
+    assert!(table["rows"].as_array().unwrap().iter().any(|row| row[3] == "checked"), "{table}");
 
     // kind=clip hands the words to the clips ranker; store rows only.
     let walk = call(&mut s, "assets", json!({"find": "heavy walk", "kind": "clip", "limit": 5}));
@@ -83,6 +84,11 @@ fn the_store_finds_shelves_credits_and_refuses() {
     let props = call(&mut s, "assets", json!({"shelf": "prop"})).to_string();
     assert!(props.contains("LIB/core/chair") && props.contains("LIB/kenney_mini_dungeon/table"), "{props}");
     assert!(!props.contains("LIB/kenney_mini_dungeon/wall\""), "a 94% mesh import is not on the shelf: {props}");
+    // It leads with the foundations by archetype, each with its knobs and presets, listed once (S2).
+    assert!(props.starts_with("{\"foundations\":{\"barrel\":[\"LIB/core/barrel "), "{props}");
+    assert!(props.contains("\"LIB/core/cask 64x73x64 girth=18-48 height=40-120 :keg :tun\""), "{props}");
+    assert!(props.contains("\"LIB/core/chair 44x96x45 @sit back=slat/none/high :high_back :stool\""), "{props}");
+    assert_eq!(props.matches("LIB/core/chair ").count(), 1, "{props}");
 
     // Every row the store reads has an admitted licence and none comes from a local tier.
     let root = repo().join("assets/props");
@@ -122,5 +128,34 @@ fn the_store_finds_shelves_credits_and_refuses() {
         // Sets on disk are listed as a range; every embedded one by name.
         assert!(source.where_ != "embedded" || text.contains(&format!("- {} (embedded)", source.what)), "{}", source.what);
     }
+
+    // STORE.tsv is current (S2): one row per entry of each kind, each with an admitted licence,
+    // none from a local tier, standard holding only CC0 and own work, about 50 tokens a row.
+    let table = asset_library::store_table(&root).unwrap();
+    let committed = std::fs::read_to_string(repo().join("store/STORE.tsv")).unwrap();
+    assert_eq!(table, committed, "store/STORE.tsv is stale: run `pav assets reindex=store`");
+    let mut lines = table.lines().filter(|line| !line.starts_with('#'));
+    assert_eq!(lines.next(), Some(asset_library::STORE_HEADER));
+    let mut kinds = std::collections::BTreeMap::new();
+    for line in lines {
+        let cells: Vec<&str> = line.split('\t').collect();
+        let [id, kind, tier, licence, ..] = cells[..] else { panic!("{line}") };
+        assert_eq!(cells.len(), 11, "{line}");
+        let foundation = pav_core::store::foundation(id).map_or("-", |foundation| foundation.archetype);
+        assert_eq!(cells[8], foundation, "the foundation column: {line}");
+        assert!(pav_core::store::admitted(licence, kind).is_ok() && !pav_core::store::local_path(id), "{line}");
+        assert!(tier != "standard" || licence == "CC0-1.0", "standard is CC0 and own work: {line}");
+        assert!(line.len() <= asset_library::STORE_ROW_BYTES, "{line}");
+        *kinds.entry(kind.to_owned()).or_insert(0) += 1;
+    }
+    assert!(kinds["prop"] >= 90 && kinds["clip"] >= 400 && kinds["material"] == 15, "{kinds:?}");
+    assert!(table.contains("\nLIB/core/cask\tprop\tstandard\tCC0-1.0\tedited\timport\t"), "the Kenney fork is standard");
+    let shares = table.lines().nth(1).unwrap();
+    assert!(["prop", "clip", "material"].iter().all(|kind| shares.contains(&format!("{kind} "))), "{shares}");
+    assert!(shares.contains("% imported"), "the header reports each kind's imported share: {shares}");
+
+    // The store's README stays within its budget (§12: 1,500 tokens).
+    let readme = std::fs::read_to_string(repo().join("store/README.md")).unwrap();
+    assert!(index::tokens(readme.len()) <= 1_500, "store/README.md: {} tokens", index::tokens(readme.len()));
     std::fs::remove_dir_all(&scratch).unwrap();
 }
