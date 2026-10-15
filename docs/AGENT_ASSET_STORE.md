@@ -1,8 +1,8 @@
 # The agent asset store
 
 A library of game assets that agents search, use as they are, fork and change, or learn from. It
-plays the part Epic's Fab store plays for people, but its customer is an agent. Status: design
-only; nothing here is built. Facts come from a read-only survey of Shardfall and its sibling
+plays the part Epic's Fab store plays for people, but its customer is an agent. Status: S0 is
+built (2026-10-15, `docs/HISTORY.md`); the rest is design. Facts come from a read-only survey of Shardfall and its sibling
 repositories on 2026-10-14, re-checked where noted; *unverified* marks what was not checked.
 Agents using the store read `store/README.md` and the shelf (built in S0-S2), not this file.
 
@@ -142,8 +142,10 @@ foundation names its knobs and shows two or three derivations.
   chairs that transform. The large clip libraries on disk (CMU, 100STYLE) stay as inspiration to
   derive foundations from; most of their variants never become entries.
 - **Recipes over results.** .kkrieger built a whole 96 KB game from a few generators and chains of
-  operators; the store keeps the recipe and its knobs, not every output. QUOD is on the list to
-  study (*not yet surveyed*).
+  operators. QUOD (Daivuk, 2025) fits a retro shooter in a 64 KB executable: 3 levels, a boss, 4
+  enemies and 4 weapons, with all textures, models, animations, sound and music
+  (https://daivuk.itch.io/quod; its method is in a video, not yet studied). The store keeps the
+  recipe and its knobs, not every output.
 
 **The rule for imports, stated once.** An import enters a pack on disk only if it passes the licence
 gate and the fit thresholds and is at most 30% mesh (mesh parts can be placed, scaled and
