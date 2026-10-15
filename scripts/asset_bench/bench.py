@@ -19,6 +19,9 @@ it would normally get, make better assets for fewer tokens?
   bench.py store-score [--gate S1]                 each store run's ids, roles, sizes, findings
   bench.py tokens [--gate S1] [--main]             model calls, tokens read, weighted cost from transcripts
   bench.py store-report [--gate S1]                S1's rule: arm L cheaper on 5 of 6 briefs
+  bench.py store-prepare --gate S3 --arm S3 --bin-arm S3 --briefs-file s3_briefs.toml   S3's mixed briefs
+  bench.py store-needs [--gate S3]                 S3's met/needs per kind and the logged misses
+  bench.py cost --mark S3-start | --stage S3 | --test S3 bench --gate S3   US$ as Claude Code bills it
 
 Runs live in .cache/asset_bench/runs/<gate>/<arm>/<task>-r<k>/ (git-ignored). Each author run is
 one fresh `asset-bench-author` agent (.claude/agents/) that reads RUN/brief.md and RUN/docs/ and
@@ -27,6 +30,7 @@ drives the engine only through scripts/asset_bench/pav RUN. Each judgment is one
 """
 
 import argparse
+import calendar
 import colorsys
 import hashlib
 import json
@@ -34,6 +38,7 @@ import math
 import os
 import random
 import re
+import shlex
 import shutil
 import statistics
 import struct
@@ -1137,8 +1142,11 @@ def pair_rules_hold():
 STORE_BRIEFS = BENCH / "store_briefs.toml"
 STORE_RUNS = RESULTS / "store_runs.tsv"
 AGENT_TOKENS = RESULTS / "agent_tokens.tsv"
+STORE_NEEDS = RESULTS / "store_needs.tsv"  # S3: one row per need per run
 # The arms: one binary from S0's merged head; S1A hides the library from find (PAV_FIND=builtin).
-STORE_ARMS = {"S1A": {"PAV_FIND": "builtin"}, "S1L": {}}
+STORE_ARMS = {"S1A": {"PAV_FIND": "builtin"}, "S1L": {}, "S3": {}}
+# Arms whose README carries the shelf line (S3 measures critical mass with S1L's line).
+SHELF_ARMS = {"S1L", "S3"}
 # Packs and on-disk clip sets every store run gets (licences the store admits; never local/).
 STORE_PACKS = ["kenney_mini_dungeon", "quaternius_medieval_village"]
 STORE_CLIP_SETS = ["100style", "cmu"]
@@ -1177,15 +1185,36 @@ Budget: {commands} engine commands and {images} images; the wrapper refuses comm
 """
 
 
-def store_briefs():
-    with open(STORE_BRIEFS, "rb") as f:
+def store_briefs(path=None):
+    """A briefs file's table and briefs by id; `order` defaults to file order."""
+    with open(path or STORE_BRIEFS, "rb") as f:
         table = tomllib.load(f)
+    for k, brief in enumerate(table["brief"]):
+        brief.setdefault("order", k + 1)
     return table, {b["id"]: b for b in table["brief"]}
+
+
+def role_kind(role):
+    return role.get("kind", "prop")
+
+
+def brief_docs(brief):
+    """The docs a brief's run reads: the object tools, plus each role kind's own doc."""
+    docs = ["ASSET_STUDIO.md"]
+    kinds = {role_kind(r) for r in brief["roles"]}
+    for doc in brief.get("docs", []) + (["MATERIALS.md"] if "material" in kinds else []) + \
+            (["ANIMATION_STUDIO.md"] if "clip" in kinds else []):
+        if doc not in docs:
+            docs.append(doc)
+    return docs
 
 
 def store_brief_text(brief, cap):
     roles = ", ".join(f"{r['role']} ({r.get('count', 1)})" for r in brief["roles"])
-    clips = all(r.get("kind") == "clip" for r in brief["roles"])
+    kinds = {role_kind(r) for r in brief["roles"]}
+    if len(kinds) > 1:
+        return mixed_brief_text(brief, cap, roles)
+    clips = kinds == {"clip"}
     item = ('{"role": "<role>", "id": "<SET/Clip or WORKSHOP/name>", "how": "placed|made"}' if clips else
             '{"role": "<role>", "id": "<asset name>", "how": "placed|forked|made", "pos": [x, y, z], '
             '"yaw": 0, "scale": 1}')
@@ -1202,7 +1231,7 @@ def store_brief_text(brief, cap):
 
 
 def cmd_store_prepare(args):
-    table, briefs = store_briefs()
+    table, briefs = store_briefs(args.briefs_file)
     if args.arm not in STORE_ARMS:
         sys.exit(f"store arms are {', '.join(STORE_ARMS)}")
     info = load(BIN / f"pav-{args.bin_arm}.json")
@@ -1227,21 +1256,22 @@ def cmd_store_prepare(args):
         for clip_set in STORE_CLIP_SETS:
             (run / "anim" / clip_set).symlink_to(REPO / "anim" / clip_set)
         (run / "store/misses.tsv").write_text("date\tkind\tquery\tnearest\n")
-        docs = ["ASSET_STUDIO.md"] + brief.get("docs", [])
+        docs = brief_docs(brief)
         for doc in docs:
             text = (REPO / "docs" / doc).read_text() if args.docs == "worktree" else git("show", f"{info['sha']}:docs/{doc}")
             if args.arm == "S1A" and SHELF_STEP in text:
                 text = text.replace(SHELF_STEP, "")
             (run / "docs" / doc).write_text(text)
         extra = "".join(f", `{doc}` {'the animation tools' if 'ANIM' in doc else 'the materials'}" for doc in docs[1:])
-        shelf = ("\n\n" + SHELF_LINE) if args.arm == "S1L" else ""
+        shelf = ("\n\n" + SHELF_LINE) if args.arm in SHELF_ARMS else ""
         (run / "docs/README.md").write_text(STORE_README.format(extra=extra, shelf=shelf, commands=cap[0],
                                                                 images=cap[1]))
         (run / "brief.md").write_text(store_brief_text(brief, cap))
         config = {"gate": args.gate, "arm": args.arm, "task": brief_id, "run": args.run, "kind": "store",
                   "names": [], "bin": str(BIN / f"pav-{args.bin_arm}"), "sha": info["sha"], "cap": cap,
                   "env": STORE_ARMS[args.arm], "model": args.model, "effort": args.effort,
-                  "harness": args.harness, "prepared": time.strftime("%Y-%m-%d %H:%M")}
+                  "harness": args.harness, "prepared": time.strftime("%Y-%m-%d %H:%M"),
+                  "briefs": str(Path(args.briefs_file).resolve()) if args.briefs_file else ""}
         with open(run / "run.json", "w") as f:
             json.dump(config, f, indent=1)
         made.append(run)
@@ -1307,6 +1337,8 @@ def score_store_run(binary, run, brief):
     items = done.get("items", []) if isinstance(done, dict) else []
     facts = {"done": int(done is not None), "items": len(items), "findings": 0, "problems": [], "ids": []}
     roles = {r["role"]: r for r in brief["roles"]}
+    if len({role_kind(r) for r in brief["roles"]}) > 1:
+        return score_mixed_run(binary, run, brief, items, facts)
     clip_brief = all(r.get("kind") == "clip" for r in brief["roles"])
     if clip_brief:
         workshop = load(run / "anim/workshop.json", {}) or {}
@@ -1378,17 +1410,219 @@ def score_store_run(binary, run, brief):
     return facts
 
 
+def log_rows(run):
+    """A run's logged commands as (tool, args, reply text), refused ones left out."""
+    out = []
+    for line in (run / "log.jsonl").read_text().splitlines() if (run / "log.jsonl").exists() else []:
+        row = json.loads(line)
+        if row["refused"]:
+            continue
+        text = row["line"].strip()
+        try:
+            value = json.loads(text) if text.startswith("{") else None
+        except ValueError:
+            value = None
+        if value:
+            tool, args = value.get("tool", ""), value.get("args") or {}
+        else:
+            try:
+                words = shlex.split(text)
+            except ValueError:
+                words = text.split()
+            tool, args = (words[0] if words else ""), dict(w.split("=", 1) for w in words[1:] if "=" in w)
+        out.append((tool, {k: str(v) for k, v in args.items()}, row["reply"]))
+    return out
+
+
+def base_id(name):
+    """An entry id without a preset (`LIB/core/table:wide` -> `LIB/core/table`), lowercase."""
+    name = str(name or "").strip()
+    head, _, tail = name.rpartition(":")
+    return (head if head and "/" not in tail else name).lower()
+
+
+def offered(run, top=5):
+    """What a run's searches put in front of the agent (S3's "top 5"): the first `top` rows of
+    each find reply (None: every row), the nearest rows of a `none`, every entry on a shelf it
+    opened."""
+    seen = set()
+    for tool, args, reply in log_rows(run):
+        try:
+            value = json.loads(reply)
+        except ValueError:
+            continue
+        if not isinstance(value, dict) or "error" in value:
+            continue
+        if tool == "assets" and "shelf" in args:
+            def walk(v):
+                if isinstance(v, str):
+                    if "/" in v and not v.startswith("+"):
+                        seen.add(base_id(v))
+                        seen.add(base_id(v.split()[0]))
+                elif isinstance(v, dict):
+                    for x in v.values():
+                        walk(x)
+                elif isinstance(v, list):
+                    for x in v:
+                        walk(x)
+            walk(value)
+            # Since S3 the prop shelf names foundations by their LIB/core leaf.
+            for lines in (value.get("foundations") or {}).values():
+                for line in lines if isinstance(lines, list) else []:
+                    if isinstance(line, str) and line.split():
+                        seen.add(base_id("LIB/core/" + line.split()[0]))
+        elif (tool == "assets" and "find" in args) or (tool == "clips" and "find" in args):
+            for row in (value.get("rows") or [])[:top] + (value.get("nearest") or [])[:top]:
+                if isinstance(row, list) and row:
+                    seen.add(base_id(row[0]))
+            for clip in (value.get("clips") or [])[:top]:
+                if isinstance(clip, dict) and clip.get("name"):
+                    seen.add(base_id(clip["name"]))
+    return seen
+
+
+def copy_sources(run):
+    """Workshop leaf -> the entry it was copied from, for every successful copy (props,
+    materials, clips)."""
+    sources = {}
+    for tool, args, reply in log_rows(run):
+        if args.get("action") == "copy" and args.get("from") and args.get("name") and not reply.startswith('{"error"'):
+            sources[args["name"].split("/")[-1].lower()] = base_id(args["from"])
+    return sources
+
+
+def score_mixed_run(binary, run, brief, items, facts):
+    """S3's mixed briefs: each item scored by its role's kind (props inspected and checked,
+    materials inspected, clips looked up), then each need met or not."""
+    roles = {r["role"]: r for r in brief["roles"]}
+    workshop_clips = (load(run / "anim/workshop.json", {}) or {}).get("clips") or {}
+    lines, plan = [json.dumps({"tool": "load", "args": {"scene": "empty"}})], []
+    for item in items:
+        role = roles.get(item.get("role"))
+        kind = role_kind(role) if role else item.get("kind", "prop")
+        name = str(item.get("id", ""))
+        start = len(lines)
+        if kind == "prop" and (":" in name or isinstance(item.get("params"), dict)):
+            # A derived variant (NAME:preset, params): sized by spawning it; checked as its base.
+            args = {"action": "add", "name": name, "pos": [0, 0, 0]}
+            if isinstance(item.get("params"), dict):
+                args["params"] = item["params"]
+            lines.append(json.dumps({"tool": "asset_spawn", "args": args}))
+            lines.append(json.dumps({"tool": "asset_edit", "args": {"action": "check", "name": name.split(":")[0], "all": True}}))
+        elif kind == "prop":
+            lines.append(json.dumps({"tool": "asset_edit", "args": {"action": "inspect", "name": name, "bounds": True}}))
+            lines.append(json.dumps({"tool": "asset_edit", "args": {"action": "check", "name": name, "all": True}}))
+        elif kind == "material":
+            lines.append(json.dumps({"tool": "asset_edit", "args": {"kind": "material", "action": "inspect", "name": name}}))
+        elif not name.upper().startswith("WORKSHOP/"):
+            lines.append(json.dumps({"tool": "clips", "args": {"name": name}}))
+        plan.append((item, role, kind, name, start, len(lines)))
+    replies = run_engine(binary, run, lines) if lines else []
+    reply = lambda k: replies[k] if k < len(replies) else {"error": "no reply"}
+    resolved = {}
+    for item, role, kind, name, start, end in plan:
+        before = len(facts["problems"])
+        facts["ids"].append(name)
+        if role is None:
+            # An extra item for a role the brief doesn't name (a dock under the dock's boards):
+            # noted, not a problem.
+            facts.setdefault("extras", []).append(name)
+            continue
+        ok = True
+        if kind == "prop":
+            inspect, check = reply(start), reply(start + 1)
+            if "instance" in inspect:
+                bounds = inspect["instance"].get("bounds") or {}
+                inspect = {"asset": True, "bounds": [bounds.get("min", [0, 0, 0]), bounds.get("max", [0, 0, 0])]}
+            if not inspect.get("asset"):
+                facts["problems"].append(f"{name}: does not resolve ({str(inspect.get('error', ''))[:80]})")
+                ok = False
+            else:
+                lo, hi = inspect["bounds"]
+                scale = float(item.get("scale", 1) or 1)
+                cm = [(hi[i] - lo[i]) * 100 * scale for i in range(3)]
+                for key, value in (("h", cm[1]), ("l", max(cm))):
+                    if key in role and not role[key][0] <= value <= role[key][1]:
+                        facts["problems"].append(f"{name}: {item['role']} {key} {value:.0f} cm, wanted {role[key][0]}-{role[key][1]}")
+                if role.get("light"):
+                    lights = re.search(r"(\d+) lights", check.get("cost", ""))
+                    if not lights or int(lights.group(1)) == 0:
+                        facts["problems"].append(f"{name}: gives off no light")
+                if name.upper().startswith("WORKSHOP/"):
+                    for line in check.get("check", []):
+                        facts["findings"] += 1
+                        if line.split(":")[0] in ("floating", "unit_suspect", "below_floor", "not_grounded"):
+                            facts["problems"].append(f"{name}: {line}")
+        elif kind == "material":
+            inspect = reply(start)
+            if "error" in inspect:
+                facts["problems"].append(f"{name}: material does not resolve ({str(inspect['error'])[:80]})")
+                ok = False
+            else:
+                facts["findings"] += len(inspect.get("check", [])) if not name.upper().startswith("MAT/") else 0
+        else:
+            if name.upper().startswith("WORKSHOP/"):
+                clip = workshop_clips.get(name.split("/", 1)[1])
+                looping = bool(clip and clip.get("loop"))
+            else:
+                clip = reply(start) if "name" in reply(start) else None
+                looping = bool(clip and clip.get("loop"))
+            if clip is None:
+                facts["problems"].append(f"{name}: clip does not resolve")
+                ok = False
+            elif role.get("loop") and not looping:
+                facts["problems"].append(f"{name}: {item.get('role')} must loop")
+        # Met needs only resolving items that also pass their role's size, light and loop checks.
+        resolved[id(item)] = ok and len(facts["problems"]) == before
+    for role_name, spec in roles.items():
+        have = sum(1 for i in items if i.get("role") == role_name)
+        if have < spec.get("count", 1):
+            facts["problems"].append(f"role {role_name}: {have} of {spec.get('count', 1)}")
+    if not facts["done"]:
+        facts["problems"].append("no done.json")
+    # Needs (§13 S3): one per role, in brief order; met when an item for it was placed, forked or
+    # derived from an entry the run's searches offered, and it resolves.
+    shown, anywhere, sources = offered(run), offered(run, None), copy_sources(run)
+    needs = brief.get("needs") or [f"{role_kind(r)}: {r['role']}" for r in brief["roles"]]
+    facts["needs"] = []
+    for k, role in enumerate(brief["roles"]):
+        best = {"how": "", "id": "", "source": "", "offered": 0, "met": 0, "used": 0}
+        for item in (i for i in items if i.get("role") == role["role"]):
+            how = str(item.get("how", "")).lower()
+            name = str(item.get("id", ""))
+            leaf = name.split("/")[-1].lower()
+            source = base_id(item.get("from")) if item.get("from") else ""
+            if how == "forked":
+                source = sources.get(leaf, source)
+            elif how in ("placed", "derived") and not source:
+                source = base_id(name)
+            hit = int(bool(source) and source in shown)
+            good = how in ("placed", "forked", "derived") and resolved.get(id(item), False)
+            met = int(good and hit)
+            # Secondary: the entry came from any row the run's searches showed, not only the top 5.
+            used = int(good and bool(source) and source in anywhere)
+            row = {"how": how, "id": name, "source": source, "offered": hit, "met": met, "used": used}
+            if (met, used, hit) > (best["met"], best["used"], best["offered"]) or not best["how"]:
+                best = row
+        facts["needs"].append({"role": role["role"], "kind": role_kind(role),
+                               "need": needs[k] if k < len(needs) else role["role"], **best})
+    return facts
+
+
 def cmd_store_score(args):
-    _, briefs = store_briefs()
     columns = ["gate", "arm", "task", "run", "done", "accepted", "items", "findings", "calls", "failed", "refused",
                "wall_s", "ids", "model", "effort", "harness", "problems"]
-    rows = []
+    rows, need_rows = [], []
     for run in run_dirs(args.gate):
         config = load(run / "run.json")
         if config.get("kind") != "store":
             continue
+        _, briefs = store_briefs(args.briefs_file or config.get("briefs") or None)
         binary = Path(args.bin).resolve() if args.bin else Path(config["bin"])
         facts = score_store_run(binary, run, briefs[config["task"]])
+        for need in facts.get("needs", []):
+            need_rows.append({"gate": config["gate"], "arm": config["arm"], "task": config["task"],
+                              "run": config["run"], **need})
         logged = [json.loads(line) for line in (run / "log.jsonl").read_text().splitlines()] \
             if (run / "log.jsonl").exists() else []
         times = [r["t"] for r in logged]
@@ -1404,6 +1638,9 @@ def cmd_store_score(args):
             "effort": runner.get("effort", config.get("effort", "")),
             "harness": runner.get("harness", config.get("harness", "")), "problems": "; ".join(facts["problems"])})
     write_tsv(STORE_RUNS, columns, rows, args.gate)
+    if need_rows:
+        write_tsv(STORE_NEEDS, ["gate", "arm", "task", "run", "role", "kind", "need", "how", "id", "source", "offered",
+                                "met", "used"], need_rows, args.gate)
     # Each run's done.json and workshop assets, as text, for re-scoring later (run folders stay in
     # .cache/, git-ignored).
     for run in run_dirs(args.gate):
@@ -1571,6 +1808,231 @@ def cmd_store_report(args):
           f"L {findings['S1L']}: {'PASS' if passed else 'FAIL'}")
 
 
+def mixed_brief_text(brief, cap, roles):
+    """A brief whose roles mix props, materials and clips (S3): one item format for all three."""
+    kinds = ", ".join(f"{r['role']} = {role_kind(r)}" for r in brief["roles"])
+    item = ('{"role": "<role>", "kind": "prop|material|clip", "id": "<entry id>", '
+            '"how": "placed|forked|derived|made", "from": "<entry it came from>", "pos": [x, y, z], "yaw": 0, "scale": 1}')
+    return "\n".join([
+        f"# Brief {brief['id']}: {brief['title']}", "", brief["text"].replace("\n", " "), "",
+        f"Roles (at least this many items each): {roles}.", f"Kinds: {kinds}.", "",
+        "When you are done, write RUN/done.json listing every item:", f'{{"items": [{item}, ...], "notes": "<=20 words"}}',
+        "`placed`: an existing entry as it is; `forked`: your WORKSHOP copy of one, changed; `derived`: an existing "
+        "entry through its own knobs (a preset `NAME:preset`, params, a palette or a seed; give the id you would "
+        "spawn and add \"params\" if any); `made`: new from scratch. `from` names the entry a forked or derived item "
+        "came from. A prop's id is an asset name; a material's a material name (`MAT/...` or yours); a clip's "
+        "`SET/Clip` or your `WORKSHOP/name`. pos (props only) is in metres, y up, the origin on the floor unless it "
+        "rests on another item; scale is uniform (default 1).",
+        "", f"Budget: {cap[0]} engine commands and {cap[1]} images. Then reply \"done\".", ""])
+
+
+def cmd_store_needs(args):
+    """S3's measure (§13): met/needs per kind over a gate's runs (results/store_needs.tsv, written
+    by store-score), and the misses the runs logged, most frequent first."""
+    rows = [r for r in read_tsv(STORE_NEEDS) if r["gate"] == args.gate and (not args.run or r["run"] == args.run)]
+    if not rows:
+        sys.exit(f"no needs for {args.gate}: run bench.py store-score --gate {args.gate} first")
+    kinds, used = {}, {}
+    for r in rows:
+        met, total = kinds.get(r["kind"], (0, 0))
+        kinds[r["kind"]] = (met + int(r["met"]), total + 1)
+        used[r["kind"]] = used.get(r["kind"], 0) + int(r.get("used") or 0)
+    for task in sorted({r["task"] for r in rows}):
+        mine = [r for r in rows if r["task"] == task]
+        print(f"{task}: {sum(int(r['met']) for r in mine)}/{len(mine)} met  " + "; ".join(
+            f"{r['role']} {r['how'] or '-'}{' ' + r['id'] if r['id'] else ''}{' (met)' if r['met'] == '1' else ''}" for r in mine))
+    passed = all(met / total >= 0.8 for met, total in kinds.values())
+    print("met/needs: " + ", ".join(f"{k} {m}/{t} = {m / t:.2f}" for k, (m, t) in sorted(kinds.items())) +
+          f" -> {'critical mass' if passed else 'below 0.8'}")
+    print("store used (any row shown, not only the top 5): " +
+          ", ".join(f"{k} {used[k]}/{t}" for k, (_, t) in sorted(kinds.items())))
+    misses = {}
+    for run in run_dirs(args.gate):
+        path = run / "store/misses.tsv"
+        for line in path.read_text().splitlines()[1:] if path.exists() else []:
+            cells = line.split("\t")
+            if len(cells) >= 3:
+                key = (cells[1], cells[2].lower())
+                misses[key] = misses.get(key, 0) + 1
+    print("misses: " + "; ".join(f"{k} \"{q}\" x{n}" for (k, q), n in sorted(misses.items(), key=lambda kv: (-kv[1], kv[0]))))
+
+
+# --- US$ as Claude Code bills it (docs/AGENT_ASSET_STORE.md §15, "Tests and cost") ---------------
+
+STAGE_MARKS = RESULTS / "stage_marks.tsv"
+TEST_COST = RESULTS / "test_cost.tsv"
+TEST_COST_COLUMNS = ["stage", "kind", "run", "usd", "start", "end"]
+PRICES = CACHE / "prices.json"  # git-ignored: US$ per million tokens, keyed by model id
+
+
+def prices():
+    table = load(PRICES)
+    if not table:
+        sys.exit(f"no price table at {PRICES}: US$ per million tokens per model id "
+                 '({"<model id>": {"input":..,"output":..,"cache_write_5m":..,"cache_write_1h":..,"cache_read":..}})')
+    return table
+
+
+def call_usd(usage, price):
+    """One model call's US$, the way Claude Code prices it: 1-hour cache writes at their own rate,
+    a 10% surcharge for US-only inference."""
+    written = usage.get("cache_creation_input_tokens", 0) or 0
+    hour = min((usage.get("cache_creation") or {}).get("ephemeral_1h_input_tokens", 0) or 0, written)
+    usd = (usage.get("input_tokens", 0) * price["input"] + usage.get("output_tokens", 0) * price["output"]
+           + (usage.get("cache_read_input_tokens", 0) or 0) * price["cache_read"]
+           + hour * price["cache_write_1h"] + (written - hour) * price["cache_write_5m"]) / 1e6
+    return usd * (1.1 if usage.get("inference_geo") == "us" else 1)
+
+
+def priced_calls(paths, since=None, until=None):
+    """Each model call in these transcripts once (a streamed message repeats its usage per line):
+    (time, model, US$). Unknown models are named so the price table can be completed."""
+    table, seen, calls, unknown = prices(), set(), [], set()
+    for path in paths:
+        for line in path.read_text().splitlines():
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            message = entry.get("message") or {}
+            usage = message.get("usage")
+            if message.get("role") != "assistant" or not usage:
+                continue
+            key = message.get("id") or entry.get("requestId") or entry.get("uuid")
+            stamp = entry.get("timestamp", "")
+            if key in seen or (since and stamp < since) or (until and stamp > until):
+                continue
+            seen.add(key)
+            model = message.get("model", "")
+            if model not in table:
+                unknown.add(model)
+                continue
+            calls.append((stamp, model, call_usd(usage, table[model])))
+    if unknown - {"<synthetic>", ""}:
+        print(f"warning: no price for {', '.join(sorted(unknown - {'<synthetic>', ''}))} (calls left out)")
+    return calls
+
+
+def all_transcripts():
+    folder = projects_dir()
+    return sorted(folder.glob("*.jsonl")) + sorted(folder.glob("*/subagents/**/agent-*.jsonl"))
+
+
+def billed_states():
+    """Claude Code's own cost-state records: cumulative US$ per worker process (keyed by its start
+    time), each at the time of the transcript line before it (the record has none of its own)."""
+    states = {}
+    for path in sorted(projects_dir().glob("*.jsonl")):
+        last = None
+        for line in path.read_text().splitlines():
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if entry.get("type") != "cost-state":
+                last = entry.get("timestamp") or last
+                continue
+            if last:
+                at = calendar.timegm(time.strptime(last[:19], "%Y-%m-%dT%H:%M:%S"))
+                states.setdefault(entry["startTime"], []).append((at, entry["totalCostUSD"]))
+    return {k: sorted(v) for k, v in states.items()}
+
+
+def iso(seconds):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(seconds))
+
+
+def read_tsv(path):
+    if not path.exists():
+        return []
+    header, *body = path.read_text().splitlines()
+    return [dict(zip(header.split("\t"), line.split("\t"))) for line in body]
+
+
+def cmd_cost(args):
+    """Stage marks, a stage's total and test US$, and test-run rows (results/test_cost.tsv)."""
+    if args.mark:
+        stage, _, event = args.mark.rpartition("-")
+        if event not in ("start", "end") or not stage:
+            sys.exit("--mark takes <stage>-start or <stage>-end, e.g. S3-start")
+        rows = read_tsv(STAGE_MARKS) + [{"stage": stage, "event": event, "time": iso(time.time())}]
+        RESULTS.mkdir(parents=True, exist_ok=True)
+        STAGE_MARKS.write_text("stage\tevent\ttime\n" + "".join(f"{r['stage']}\t{r['event']}\t{r['time']}\n"
+                                                                  for r in rows))
+        print(f"{stage} {event} at {rows[-1]['time']} UTC")
+        return
+    if args.test:
+        stage, kind = args.test
+        runs = []
+        if args.gate:
+            for run in run_dirs(args.gate):
+                runs.append((run.relative_to(RUNS).as_posix(), str(run)))
+        elif args.run and args.match:
+            runs.append((args.run, args.match))
+        else:
+            sys.exit("--test STAGE KIND needs --gate GATE (one row per run folder) or --run NAME --match TEXT")
+        agents = sorted(projects_dir().glob("*/subagents/**/agent-*.jsonl"))
+        prompts = {path: first_prompt(path) for path in agents}
+        rows = [r for r in read_tsv(TEST_COST) if not (r["stage"] == stage and r["run"] in {n for n, _ in runs})]
+        for name, match in runs:
+            matched = [p for p, prompt in prompts.items() if match in prompt]
+            calls = priced_calls(matched)
+            if not calls:
+                continue
+            usd = sum(c[2] for c in calls)
+            rows.append({"stage": stage, "kind": kind, "run": name, "usd": f"{usd:.4f}", "start": calls[0][0][:19],
+                         "end": calls[-1][0][:19]})
+            print(f"{stage} {kind} {name}: ${usd:.4f} ({len(calls)} calls, {len(matched)} transcripts)")
+        rows.sort(key=lambda r: (r["stage"], r["start"]))
+        RESULTS.mkdir(parents=True, exist_ok=True)
+        TEST_COST.write_text("\t".join(TEST_COST_COLUMNS) + "\n" + "".join(
+            "\t".join(r.get(c, "") for c in TEST_COST_COLUMNS) + "\n" for r in rows))
+        return
+    if not args.stage:
+        sys.exit("cost: --mark, --test or --stage")
+    marks = [r for r in read_tsv(STAGE_MARKS) if r["stage"] == args.stage]
+    start = next((r["time"] for r in marks if r["event"] == "start"), None)
+    end = next((r["time"] for r in reversed(marks) if r["event"] == "end"), None)
+    if not start:
+        sys.exit(f"no {args.stage}-start mark: bench.py cost --mark {args.stage}-start")
+    until = end or iso(time.time())
+    # Stages can overlap (a builder agent for one stage runs while another stage tests): drop
+    # the subagents whose first prompt holds an --exclude text, or keep only an --only text's.
+    paths = all_transcripts()
+    if args.exclude or args.only:
+        def keep(path):
+            if "/subagents/" not in str(path):
+                return not args.only
+            prompt = first_prompt(path)
+            if args.only:
+                return any(text in prompt for text in args.only)
+            return not any(text in prompt for text in args.exclude)
+        paths = [p for p in paths if keep(p)]
+    calls = priced_calls(paths, start, until)
+    total = sum(c[2] for c in calls)
+    by_model = {}
+    for _, model, usd in calls:
+        by_model[model] = by_model.get(model, 0) + usd
+    t0, t1 = (calendar.timegm(time.strptime(t, "%Y-%m-%dT%H:%M:%S")) for t in (start, until))
+    tests = [r for r in read_tsv(TEST_COST) if r["stage"] == args.stage]
+    test_usd = sum(float(r["usd"]) for r in tests)
+    # Claude Code's own records, as a check: per process, the last record in the window minus the
+    # last one before it.
+    billed = 0.0
+    for records in billed_states().values():
+        inside = [usd for at, usd in records if t0 <= at <= t1]
+        before = [usd for at, usd in records if at < t0]
+        if inside:
+            billed += inside[-1] - (before[-1] if before else 0)
+    print(f"{args.stage}: {start} to {until}{'' if end else ' (open)'} UTC, {(t1 - t0) / 3600:.2f} h")
+    print(f"  total ${total:.2f} from {len(calls)} model calls"
+          f" ({', '.join(f'{m} ${u:.2f}' for m, u in sorted(by_model.items()))})")
+    print(f"  tests ${test_usd:.2f} in {len(tests)} runs"
+          f" ({', '.join(f'{k} ${sum(float(r['usd']) for r in tests if r['kind'] == k):.2f}' for k in sorted({r['kind'] for r in tests}))})")
+    if billed:
+        print(f"  cost-state records in the window: ${billed:.2f} (cumulative per process; written only now and then)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1632,10 +2094,12 @@ def main():
     p.add_argument("--effort", default="medium")
     p.add_argument("--harness", default="Claude Code subagent asset-bench-author, cloud session")
     p.add_argument("--docs", default="binary", help="binary (docs at the binary's commit) or worktree")
+    p.add_argument("--briefs-file", help="a briefs file other than store_briefs.toml (S3: s3_briefs.toml)")
     p.add_argument("--force", action="store_true")
     p = sub.add_parser("store-score")
     p.add_argument("--gate", default="S1")
     p.add_argument("--bin")
+    p.add_argument("--briefs-file", help="default: the file each run was prepared from")
     p = sub.add_parser("tokens")
     p.add_argument("--gate", default="S1")
     p.add_argument("--session", help="session id (default: the newest transcript)")
@@ -1645,6 +2109,18 @@ def main():
     p = sub.add_parser("store-report")
     p.add_argument("--gate", default="S1")
     p.add_argument("--run", default="1")
+    p = sub.add_parser("store-needs")
+    p.add_argument("--gate", default="S3")
+    p.add_argument("--run")
+    p = sub.add_parser("cost")
+    p.add_argument("--mark", help="<stage>-start or <stage>-end: note the time in results/stage_marks.tsv")
+    p.add_argument("--stage", help="report the stage's total and test US$ and hours")
+    p.add_argument("--test", nargs=2, metavar=("STAGE", "KIND"), help="record test runs in results/test_cost.tsv")
+    p.add_argument("--gate", help="with --test: one row per run folder of this gate")
+    p.add_argument("--run", help="with --test and --match: the row's name")
+    p.add_argument("--match", help="with --test: text in the subagent's first prompt (e.g. its OUT path)")
+    p.add_argument("--exclude", action="append", help="with --stage: leave out subagents whose first prompt holds this")
+    p.add_argument("--only", action="append", help="with --stage: only subagents whose first prompt holds this")
     args = parser.parse_args()
     globals()[f"cmd_{args.command.replace('-', '_')}"](args)
 
