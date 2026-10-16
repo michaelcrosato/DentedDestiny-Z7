@@ -1,0 +1,66 @@
+{
+    "action":  "Idle",
+    "adapter":  " (BrowserWebGpu, Other, driver:  )",
+    "area":  "PILGRIM\u0027S APPROACH",
+    "boss_active":  false,
+    "demo":  false,
+    "flasks":  3,
+    "fps":  59.987998962402344,
+    "frame_ms":  16.670000076293945,
+    "hp":  160,
+    "idle":  1.416666030883789,
+    "menu":  0,
+    "metrics":  {
+                    "blocks":  0,
+                    "cycles":  0,
+                    "dodges":  0,
+                    "heals":  0,
+                    "heavies":  0,
+                    "lights":  0,
+                    "parries":  0,
+                    "phase_two":  false,
+                    "recovered":  0,
+                    "rests":  0
+                },
+    "mode":  "Title",
+    "options":  {
+                    "assist":  false,
+                    "camera":  0,
+                    "contrast":  true,
+                    "shake":  true,
+                    "sound":  true
+                },
+    "player":  [
+                   -2.7770647648139857E-07,
+                   0.02000868320465088,
+                   -6.000003814697266
+               ],
+    "progress":  {
+                     "best_seconds":  0,
+                     "blood":  [
+                                   [
+                                       1,
+                                       0,
+                                       9
+                                   ],
+                                   42
+                               ],
+                     "checkpoint":  1,
+                     "chime":  true,
+                     "deaths":  0,
+                     "echoes":  137,
+                     "edge":  1,
+                     "gate":  true,
+                     "guardian":  false,
+                     "kills":  0,
+                     "lore":  0,
+                     "relic":  true,
+                     "shortcut":  true,
+                     "started":  true,
+                     "version":  1,
+                     "vigor":  2,
+                     "weapon":  1
+                 },
+    "stamina":  120,
+    "time":  0
+}

@@ -1,0 +1,41 @@
+{
+  "environment": "Headless Windows Chrome on RTX 3060 Ti; emulated viewport and touch, not physical mobile hardware",
+  "results": [
+    {
+      "result": {
+        "width": 375,
+        "height": 667,
+        "coarse": true,
+        "overflow": false,
+        "mode": "Playing",
+        "demo": true,
+        "fps": 60.01936340332031
+      },
+      "name": "phone"
+    },
+    {
+      "result": {
+        "width": 1194,
+        "height": 834,
+        "coarse": true,
+        "overflow": false,
+        "mode": "Playing",
+        "demo": true,
+        "fps": 59.38241958618164
+      },
+      "name": "tablet"
+    },
+    {
+      "result": {
+        "width": 2560,
+        "height": 1080,
+        "coarse": false,
+        "overflow": false,
+        "mode": "Title",
+        "demo": false,
+        "fps": 60
+      },
+      "name": "ultrawide"
+    }
+  ]
+}

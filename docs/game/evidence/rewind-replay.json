@@ -1,0 +1,72 @@
+{
+  "states": [
+    {
+      "blocks": 439,
+      "entities": 23,
+      "hash": "c24fd0a8c47c5a19",
+      "projectiles": 0,
+      "scene": "dented/play",
+      "tick": 0,
+      "tick_rate": 60,
+      "time": 0
+    },
+    {
+      "blocks": 439,
+      "entities": 23,
+      "hash": "e7267d6775022b89",
+      "projectiles": 0,
+      "scene": "dented/play",
+      "tick": 240,
+      "tick_rate": 60,
+      "time": 4
+    },
+    {
+      "blocks": 439,
+      "entities": 23,
+      "hash": "0349162da8c3516e",
+      "projectiles": 0,
+      "scene": "dented/play",
+      "tick": 330,
+      "tick_rate": 60,
+      "time": 5.5
+    },
+    {
+      "blocks": 439,
+      "entities": 23,
+      "hash": "e7267d6775022b89",
+      "oldest_available": 0,
+      "projectiles": 0,
+      "scene": "dented/play",
+      "tick": 240,
+      "tick_rate": 60,
+      "time": 4
+    },
+    {
+      "blocks": 439,
+      "entities": 23,
+      "hash": "e7267d6775022b89",
+      "projectiles": 0,
+      "scene": "dented/play",
+      "tick": 240,
+      "tick_rate": 60,
+      "time": 4
+    },
+    {
+      "blocks": 439,
+      "entities": 23,
+      "hash": "0349162da8c3516e",
+      "projectiles": 0,
+      "scene": "dented/play",
+      "tick": 330,
+      "tick_rate": 60,
+      "time": 5.5
+    }
+  ],
+  "replay": {
+    "expected": "0349162da8c3516e",
+    "hash": "0349162da8c3516e",
+    "matches": true,
+    "ticks": 330,
+    "unknown_params": []
+  }
+}

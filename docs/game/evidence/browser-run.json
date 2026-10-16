@@ -1,0 +1,1196 @@
+{
+  "performance": {
+    "Count": 157,
+    "Average": 60.02807767831596,
+    "Sum": null,
+    "Maximum": 60.89176559448242,
+    "Minimum": 59.284759521484375,
+    "Property": "fps"
+  },
+  "errors": [],
+  "save_isolated": true,
+  "input_cancelled": true,
+  "milestones": {
+    "phase": true,
+    "victory": true,
+    "boss": true
+  },
+  "adapter": {
+    "vendor": "nvidia",
+    "architecture": "ampere",
+    "device": "",
+    "description": ""
+  },
+  "combat": {
+    "action": "Parry",
+    "adapter": " (BrowserWebGpu, Other, driver:  )",
+    "area": "PILGRIM'S APPROACH",
+    "boss_active": false,
+    "demo": false,
+    "flasks": 3,
+    "fps": 60,
+    "frame_ms": 16.66666603088379,
+    "hp": 120,
+    "idle": 0,
+    "menu": 0,
+    "metrics": {
+      "blocks": 0,
+      "cycles": 0,
+      "dodges": 1,
+      "heals": 0,
+      "heavies": 1,
+      "lights": 1,
+      "parries": 0,
+      "phase_two": false,
+      "recovered": 0,
+      "rests": 1
+    },
+    "mode": "Pause",
+    "options": {
+      "assist": false,
+      "camera": 0,
+      "contrast": false,
+      "shake": true,
+      "sound": true
+    },
+    "player": [
+      0.00016285503807011992,
+      0.02005302906036377,
+      26.45021629333496
+    ],
+    "progress": {
+      "best_seconds": 0,
+      "blood": null,
+      "checkpoint": 0,
+      "chime": false,
+      "deaths": 0,
+      "echoes": 0,
+      "edge": 0,
+      "gate": false,
+      "guardian": false,
+      "kills": 0,
+      "lore": 0,
+      "relic": false,
+      "shortcut": false,
+      "started": true,
+      "version": 1,
+      "vigor": 0,
+      "weapon": 0
+    },
+    "stamina": 45,
+    "time": 4.166665554046631
+  },
+  "code_commit": "ba4f23e40cb5440167cd35ce288ab1b59d936ef0",
+  "environment": "Headless Windows Chrome, WebGPU on NVIDIA Ampere; host reports GeForce RTX 3060 Ti (8 GiB). 1920x1080, DPR 1.",
+  "samples": [
+    {
+      "time": 1.1499996185302734,
+      "mode": "Playing",
+      "fps": 60.311283111572266,
+      "frame_ms": 16.580644607543945,
+      "boss_active": false
+    },
+    {
+      "time": 2.149998664855957,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": false
+    },
+    {
+      "time": 3.1666643619537354,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 4.166665554046631,
+      "mode": "Playing",
+      "fps": 59.9280891418457,
+      "frame_ms": 16.68666648864746,
+      "boss_active": false
+    },
+    {
+      "time": 5.1666789054870605,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 6.16669225692749,
+      "mode": "Playing",
+      "fps": 60.03098678588867,
+      "frame_ms": 16.658063888549805,
+      "boss_active": false
+    },
+    {
+      "time": 7.16670560836792,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": false
+    },
+    {
+      "time": 8.16671371459961,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 9.166698455810547,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 10.166683197021484,
+      "mode": "Playing",
+      "fps": 60.03098678588867,
+      "frame_ms": 16.658063888549805,
+      "boss_active": false
+    },
+    {
+      "time": 11.166667938232422,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 12.183319091796875,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 13.183303833007812,
+      "mode": "Playing",
+      "fps": 59.89219665527344,
+      "frame_ms": 16.696664810180664,
+      "boss_active": false
+    },
+    {
+      "time": 14.18328857421875,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 15.183273315429688,
+      "mode": "Playing",
+      "fps": 60.70100021362305,
+      "frame_ms": 16.474193572998047,
+      "boss_active": false
+    },
+    {
+      "time": 16.183258056640625,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 17.183242797851562,
+      "mode": "Playing",
+      "fps": 59.96402359008789,
+      "frame_ms": 16.676666259765625,
+      "boss_active": false
+    },
+    {
+      "time": 18.1832275390625,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 19.183212280273438,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 20.183197021484375,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 21.183181762695312,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 22.18316650390625,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 23.183151245117188,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 24.183135986328125,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 25.199787139892578,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 26.199771881103516,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 27.199756622314453,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 28.19974136352539,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 29.199726104736328,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 30.199710845947266,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 31.199695587158203,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 32.19968032836914,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 33.19966506958008,
+      "mode": "Playing",
+      "fps": 60.84395980834961,
+      "frame_ms": 16.435483932495117,
+      "boss_active": false
+    },
+    {
+      "time": 34.199649810791016,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 35.19963455200195,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 36.19961929321289,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 37.19960403442383,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 38.21625518798828,
+      "mode": "Playing",
+      "fps": 60.05424118041992,
+      "frame_ms": 16.651613235473633,
+      "boss_active": false
+    },
+    {
+      "time": 39.21623992919922,
+      "mode": "Playing",
+      "fps": 59.284759521484375,
+      "frame_ms": 16.867740631103516,
+      "boss_active": false
+    },
+    {
+      "time": 40.216224670410156,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 41.216209411621094,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 42.21619415283203,
+      "mode": "Playing",
+      "fps": 59.89219665527344,
+      "frame_ms": 16.696664810180664,
+      "boss_active": false
+    },
+    {
+      "time": 43.21617889404297,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 44.216163635253906,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 45.216148376464844,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 46.21613311767578,
+      "mode": "Playing",
+      "fps": 60.03098678588867,
+      "frame_ms": 16.658063888549805,
+      "boss_active": false
+    },
+    {
+      "time": 47.21611785888672,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 48.216102600097656,
+      "mode": "Playing",
+      "fps": 59.868289947509766,
+      "frame_ms": 16.703332901000977,
+      "boss_active": false
+    },
+    {
+      "time": 49.216087341308594,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 50.21607208251953,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": false
+    },
+    {
+      "time": 51.232723236083984,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 52.23270797729492,
+      "mode": "Playing",
+      "fps": 60.89176559448242,
+      "frame_ms": 16.42258071899414,
+      "boss_active": false
+    },
+    {
+      "time": 53.23269271850586,
+      "mode": "Playing",
+      "fps": 59.9520378112793,
+      "frame_ms": 16.68000030517578,
+      "boss_active": false
+    },
+    {
+      "time": 54.2326774597168,
+      "mode": "Playing",
+      "fps": 60.49961471557617,
+      "frame_ms": 16.52903175354004,
+      "boss_active": false
+    },
+    {
+      "time": 55.232662200927734,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 56.23264694213867,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 57.23263168334961,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 58.23261642456055,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 59.232601165771484,
+      "mode": "Playing",
+      "fps": 59.97601318359375,
+      "frame_ms": 16.67333221435547,
+      "boss_active": false
+    },
+    {
+      "time": 60.23258590698242,
+      "mode": "Playing",
+      "fps": 60.582374572753906,
+      "frame_ms": 16.506450653076172,
+      "boss_active": false
+    },
+    {
+      "time": 61.23257064819336,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": false
+    },
+    {
+      "time": 62.2325553894043,
+      "mode": "Playing",
+      "fps": 59.405941009521484,
+      "frame_ms": 16.83333396911621,
+      "boss_active": false
+    },
+    {
+      "time": 63.232540130615234,
+      "mode": "Playing",
+      "fps": 60.2292594909668,
+      "frame_ms": 16.603225708007812,
+      "boss_active": false
+    },
+    {
+      "time": 64.2492446899414,
+      "mode": "Playing",
+      "fps": 59.665870666503906,
+      "frame_ms": 16.760000228881836,
+      "boss_active": false
+    },
+    {
+      "time": 65.24945831298828,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 66.24967193603516,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 67.24988555908203,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 68.2500991821289,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 69.25031280517578,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 70.25052642822266,
+      "mode": "Playing",
+      "fps": 59.62685012817383,
+      "frame_ms": 16.77096939086914,
+      "boss_active": false
+    },
+    {
+      "time": 71.25074005126953,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 72.2509536743164,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 73.25116729736328,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 74.25138092041016,
+      "mode": "Playing",
+      "fps": 60.042606353759766,
+      "frame_ms": 16.65484046936035,
+      "boss_active": false
+    },
+    {
+      "time": 75.25159454345703,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 76.2518081665039,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 77.25202178955078,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 78.26890563964844,
+      "mode": "Playing",
+      "fps": 59.97601318359375,
+      "frame_ms": 16.67333221435547,
+      "boss_active": false
+    },
+    {
+      "time": 79.26911926269531,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": false
+    },
+    {
+      "time": 80.26933288574219,
+      "mode": "Playing",
+      "fps": 60.124122619628906,
+      "frame_ms": 16.632259368896484,
+      "boss_active": false
+    },
+    {
+      "time": 81.26954650878906,
+      "mode": "Playing",
+      "fps": 59.96402359008789,
+      "frame_ms": 16.676666259765625,
+      "boss_active": false
+    },
+    {
+      "time": 82.26976013183594,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 83.26997375488281,
+      "mode": "Playing",
+      "fps": 59.96131134033203,
+      "frame_ms": 16.677419662475586,
+      "boss_active": false
+    },
+    {
+      "time": 84.27018737792969,
+      "mode": "Playing",
+      "fps": 59.984519958496094,
+      "frame_ms": 16.67096710205078,
+      "boss_active": false
+    },
+    {
+      "time": 85.08702850341797,
+      "mode": "Rest",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": false
+    },
+    {
+      "time": 85.08702850341797,
+      "mode": "Rest",
+      "fps": 59.97601318359375,
+      "frame_ms": 16.67333221435547,
+      "boss_active": false
+    },
+    {
+      "time": 85.08702850341797,
+      "mode": "Rest",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 85.63714599609375,
+      "mode": "Playing",
+      "fps": 60.03098678588867,
+      "frame_ms": 16.658063888549805,
+      "boss_active": false
+    },
+    {
+      "time": 86.63735961914062,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 87.6375732421875,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 88.63778686523438,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 89.63800048828125,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 90.63821411132812,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 91.638427734375,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 92.63864135742188,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": false
+    },
+    {
+      "time": 93.63885498046875,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 94.63906860351562,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 95.6392822265625,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": false
+    },
+    {
+      "time": 96.63949584960938,
+      "mode": "Playing",
+      "fps": 59.97601318359375,
+      "frame_ms": 16.67333221435547,
+      "boss_active": false
+    },
+    {
+      "time": 97.63970947265625,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": false
+    },
+    {
+      "time": 98.63992309570312,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": false
+    },
+    {
+      "time": 99.65680694580078,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 100.65702056884766,
+      "mode": "Playing",
+      "fps": 60.13578796386719,
+      "frame_ms": 16.629032135009766,
+      "boss_active": false
+    },
+    {
+      "time": 101.65723419189453,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": false
+    },
+    {
+      "time": 102.6574478149414,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 103.65766143798828,
+      "mode": "Playing",
+      "fps": 60.40530014038086,
+      "frame_ms": 16.554838180541992,
+      "boss_active": false
+    },
+    {
+      "time": 104.65787506103516,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 105.65808868408203,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    },
+    {
+      "time": 106.6583023071289,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 107.65851593017578,
+      "mode": "Playing",
+      "fps": 59.97601318359375,
+      "frame_ms": 16.67333221435547,
+      "boss_active": false
+    },
+    {
+      "time": 108.65872955322266,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": false
+    },
+    {
+      "time": 109.65894317626953,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": false
+    },
+    {
+      "time": 110.6591567993164,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 111.65937042236328,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": false
+    },
+    {
+      "time": 112.65958404541016,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 114.3099365234375,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 115.31015014648438,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 116.31036376953125,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": true
+    },
+    {
+      "time": 117.31057739257812,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 118.310791015625,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 119.31100463867188,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 120.31121826171875,
+      "mode": "Playing",
+      "fps": 60.01936340332031,
+      "frame_ms": 16.661291122436523,
+      "boss_active": true
+    },
+    {
+      "time": 121.31143188476562,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 122.3116455078125,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 123.31185913085938,
+      "mode": "Playing",
+      "fps": 60.03098678588867,
+      "frame_ms": 16.658063888549805,
+      "boss_active": true
+    },
+    {
+      "time": 124.31207275390625,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 125.31228637695312,
+      "mode": "Playing",
+      "fps": 60.61791229248047,
+      "frame_ms": 16.496774673461914,
+      "boss_active": true
+    },
+    {
+      "time": 126.3125,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 127.32938385009766,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 128.32945251464844,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 129.32920837402344,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 130.32896423339844,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 131.32872009277344,
+      "mode": "Playing",
+      "fps": 60.55870056152344,
+      "frame_ms": 16.512903213500977,
+      "boss_active": true
+    },
+    {
+      "time": 132.89500427246094,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 133.89476013183594,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": true
+    },
+    {
+      "time": 134.89451599121094,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 135.89427185058594,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 136.89402770996094,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 137.89378356933594,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 138.89353942871094,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 139.89329528808594,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 140.89305114746094,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 141.9094696044922,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 142.9092254638672,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 143.9089813232422,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 144.9087371826172,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 145.9084930419922,
+      "mode": "Playing",
+      "fps": 60.57053756713867,
+      "frame_ms": 16.50967788696289,
+      "boss_active": true
+    },
+    {
+      "time": 146.9082489013672,
+      "mode": "Playing",
+      "fps": 60.00774002075195,
+      "frame_ms": 16.66451644897461,
+      "boss_active": true
+    },
+    {
+      "time": 147.9080047607422,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 148.9077606201172,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 149.9075164794922,
+      "mode": "Playing",
+      "fps": 60.46420669555664,
+      "frame_ms": 16.53870964050293,
+      "boss_active": true
+    },
+    {
+      "time": 150.9072723388672,
+      "mode": "Playing",
+      "fps": 59.996124267578125,
+      "frame_ms": 16.667741775512695,
+      "boss_active": true
+    },
+    {
+      "time": 151.92369079589844,
+      "mode": "Playing",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": true
+    },
+    {
+      "time": 152.92344665527344,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 153.92320251464844,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 154.92295837402344,
+      "mode": "Playing",
+      "fps": 60,
+      "frame_ms": 16.66666603088379,
+      "boss_active": true
+    },
+    {
+      "time": 155.7394256591797,
+      "mode": "Victory",
+      "fps": 59.987998962402344,
+      "frame_ms": 16.670000076293945,
+      "boss_active": false
+    }
+  ],
+  "capture_hashes": {
+    "boss-phase-two.png": "9731e511dddbe0cfba958023f63514e4ac0ee3dbc6c99dcc05a3a82f8c72d9c5",
+    "boss.png": "7efa7f216a8b11fd079861fa54161357e9e68e37f3763f306a5367d4a09caab4",
+    "controller-pause.png": "c39d3c969159f57c55dd6be5fb958050ebd1e360e076e6b7382dcb036c9a8891",
+    "journal.png": "458b2c20f0c17c38fd0f35916f77288c51788d4e413c92c5f612c053f1275df4",
+    "sanctuary.png": "37b2ea6aaeff16b2c3fd4db8980efb651d71d23d2dc962060e2daf02553bd214",
+    "settings.png": "bb97dc88aa24c434bd526efae1281fb54159e2dfd9b1a585607a440da3640fd3",
+    "title.png": "a5e55626f1cad710c279e7a2e1a493e5228bdcb9d38480d27ea21f9ea4727d5c",
+    "victory.png": "2e5fd1f3fe925d72f0f2fcdb05b7cbdef6f924b8b062d53dd856896834f7e2a4"
+  }
+}

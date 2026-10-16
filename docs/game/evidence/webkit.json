@@ -1,0 +1,34 @@
+{
+  "url": "DentedDestiny-Z7.html (local file, no content server)",
+  "results": [
+    {
+      "label": "iPhone SE (3rd gen)",
+      "category": "custom",
+      "engine": "webkit",
+      "width": 375,
+      "height": 667,
+      "dpr": 1,
+      "console_errors": [],
+      "page_errors": [],
+      "failed_requests": [],
+      "overflow": null,
+      "status": 0,
+      "file": "iphone-se-3rd-gen__webkit.png"
+    },
+    {
+      "label": "iPad Pro 11 landscape",
+      "category": "custom",
+      "engine": "webkit",
+      "width": 1194,
+      "height": 834,
+      "dpr": 1,
+      "console_errors": [],
+      "page_errors": [],
+      "failed_requests": [],
+      "overflow": null,
+      "status": 0,
+      "file": "ipad-pro-11-landscape__webkit.png"
+    }
+  ],
+  "note": "WebKit in this WSL toolkit has no navigator.gpu. Screenshots verify the compatibility message and layout, not WebGPU gameplay."
+}

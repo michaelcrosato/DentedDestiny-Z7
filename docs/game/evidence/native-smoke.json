@@ -1,0 +1,8 @@
+{
+  "standalone_working_directory": true,
+  "boot_complete": true,
+  "profile": "dev, optimized at level 1, debug symbols stripped",
+  "adapter": "llvmpipe software Vulkan under WSL",
+  "audio_device": "ALSA unavailable; continued silently",
+  "termination": "intentional 10-second timeout"
+}

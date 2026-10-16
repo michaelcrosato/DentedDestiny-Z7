@@ -8,6 +8,8 @@ The default scene is the game. The engine's original workshop and tools remain a
 
 ## Play and build
 
+[Download the playable release](https://github.com/michaelcrosato/DentedDestiny-Z7/releases/latest). Open `DentedDestiny-Z7.html` in Chrome or Edge with hardware acceleration; no content server is required. The Linux companion archive contains a stripped development build of `dented-destiny` for Ubuntu 26.04.
+
 Rust 1.98.1 is pinned. The repository includes Cargo.lock. No API keys or hosted services are needed.
 
 ```bash
@@ -19,11 +21,12 @@ scripts/build-dented.sh
 ./target/debug/shardfall --scene dented/lab
 ```
 
-The native binary retains the upstream `shardfall` executable name for tool compatibility; its default game, title, settings and save are Dented Destiny. `dented/lab` opens practice with the gates, relic and upgrade currency available. `--scene world` opens the original engine pavilion.
+The native binary retains the upstream `shardfall` executable name for tool compatibility; its default game, title, settings and save are Dented Destiny. `dented/lab` opens practice with the gates, relic and upgrade currency available; practice never writes to the campaign save. `--scene world` opens the original engine pavilion.
 
 ```bash
 # Browser output; install the wasm-bindgen-cli version pinned in Cargo.lock first.
 rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.129 --locked
 scripts/build-web.sh --single-file --scene dented \
   --title 'Dented Destiny — The Bellwether Abbey' --out out/DentedDestiny-Z7.html
 ```
@@ -31,6 +34,8 @@ scripts/build-web.sh --single-file --scene dented \
 Open the self-contained HTML in a WebGPU-capable browser with hardware acceleration. It requires no web server. `scripts/build-web.sh` without flags produces ordinary static files in target/web. `scripts/build-windows.sh` is the upstream Windows cross-build route and requires the MinGW toolchain.
 
 ## Controls
+
+Browsers require an initial click or key press to enable sound; gamepad input then handles play and menus.
 
 A standard-mapped PS5 DualSense is the primary layout. Keyboard/mouse actions follow the same combat and focus-navigation model.
 
@@ -73,6 +78,8 @@ scripts/test-dented.sh
 ./target/debug/pav bench scene=dented/play ticks=1200
 ```
 
+The final hardware run averaged **60.03 FPS at 1920×1080** in Windows Chrome on the RTX 3060 Ti; ten seeded campaigns won 10/10. See [the verification record](docs/game/VERIFICATION.md) for checks and platform limits.
+
 Start with [the game plan](docs/game/PLAN.md), [engine feedback](docs/game/ENGINE_FEEDBACK.md), and the engine's [MAKE_A_GAME](docs/MAKE_A_GAME.md) guide. The original brief is preserved in [BRIEF.txt](docs/game/BRIEF.txt). The 50 generated names, random selection method and suffix are recorded in [naming.json](docs/game/naming.json).
 
 - `crates/pav_core/src/games/dented.rs`: simulation, combat, AI, progression, menus and attract lifecycle.
@@ -91,7 +98,7 @@ This provenance is separate from the engine evaluation linked above.
 | Initial date | 2026-10-16 |
 | SOURCE | Elden Ring (2022), inspiration for deliberate combat, discovery and death/recovery. No original game's assets, story or audio are used. |
 | GAME ENGINE | [Shardfall / Pavilion](https://github.com/michaelcrosato/shardfall), workspace 0.1.0, upstream commit `dd5584bc0dbd0d3fb27de7059f97430132256b31`; Rust 1.98.1, wgpu 30, Rapier 0.36, egui 0.36. |
-| Environment | Codex tools using Bash in WSL2, Ubuntu 26.04 Linux, Windows host; RTX 3060 Ti detected (8 GiB). Browser target is WebAssembly + WebGPU. |
+| Environment | Codex tools using Bash in WSL2, Ubuntu 26.04 Linux, Windows host; RTX 3060 Ti detected (8 GiB). Browser target is WebAssembly + WebGPU, tested in headless Windows Chrome; WSL WebKit was checked for its compatibility screen. |
 | Model and effort | OpenAI Codex, GPT-6 family as identified by session configuration. Exact model variant and reasoning effort are not exposed and are not asserted. |
 | Repository | [michaelcrosato/DentedDestiny-Z7](https://github.com/michaelcrosato/DentedDestiny-Z7) |
 

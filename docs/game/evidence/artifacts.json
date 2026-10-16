@@ -1,0 +1,15 @@
+{
+  "code_commit": "ba4f23e40cb5440167cd35ce288ab1b59d936ef0",
+  "assets": [
+    {
+      "name": "DentedDestiny-Z7.html",
+      "bytes": 11663230,
+      "sha256": "91e3d11902608a66c0d9d3dc04d637ade2c2791eaef6f58da05d8ec7f00c53f0"
+    },
+    {
+      "name": "DentedDestiny-Z7-linux-x64.tar.gz",
+      "bytes": 21219240,
+      "sha256": "70e44c32643cc23c5a27bc6662e21e425efc041ca289590f05fb2783418cb80e"
+    }
+  ]
+}

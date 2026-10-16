@@ -1,0 +1,10 @@
+{
+  "events": {
+    "step": 3,
+    "strike": 1,
+    "swing": 2
+  },
+  "path": "out/dented-sfx.wav",
+  "peak": 0.232,
+  "seconds": 3.5
+}

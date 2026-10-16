@@ -20,4 +20,4 @@ Original single-level action RPG inspired by Elden Ring (2022). No source-game a
 Use the existing Game hook for rules, Rapier characters and static collision, NavGrid paths, seeded state, snapshots/replay, event-driven audio/effects and wgpu rendering. Add a typed game presentation snapshot to HudFrame. Presentation emits custom armored actors and architecture through Pavilion meshes; egui supplies controller-focused menus. Preserve the engine workshop scenes for expansion. Authored TOML contains the level and encounter balance. New content uses the same rules and assets.
 
 ## Verification record
-Pending implementation. Completion is requirement-by-requirement, with command outputs and visual evidence recorded in VERIFICATION.md.
+Implementation and the requirement-by-requirement audit are complete. Command results, runtime evidence, limitations and distribution hashes are recorded in VERIFICATION.md.
