@@ -135,7 +135,8 @@ impl Sim {
         }
     }
 
-    fn say(&mut self, msg: impl Into<String>) {
+    /// Shows a short message at the top centre of the window for a few seconds.
+    pub fn say(&mut self, msg: impl Into<String>) {
         self.state.courses.message = Some((msg.into(), self.state.tick));
     }
 
@@ -205,7 +206,7 @@ impl Sim {
         ch.impulse += flat * knockback + Vec3::Y * (knockback * 0.35 + 1.5);
         ch.anim.recoil = 1.0;
         ch.anim.hit(dir, (knockback / 6.0).clamp(0.4, 3.0));
-        events.push(SimEvent::Hit { pos: at, strength: knockback });
+        events.push(SimEvent::Hit { pos: at, strength: knockback, target: Some(id) });
         if is_player {
             if let Some(r) = &mut self.state.courses.run {
                 r.hits += 1;

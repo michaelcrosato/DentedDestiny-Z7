@@ -96,6 +96,9 @@ pub enum SimEvent {
     Hit {
         pos: Vec3,
         strength: f32,
+        /// The character struck, when it is one.
+        #[serde(default)]
+        target: Option<EntityId>,
     },
     Respawn {
         pos: Vec3,
@@ -248,6 +251,8 @@ pub struct HudFrame {
     pub boss: Option<(String, f32)>,
     /// The last pad with a note the player stepped on: label, note, tick.
     pub pad_note: Option<(String, String, u64)>,
+    /// A `games` game's HUD lines (`Game::hud`).
+    pub lines: Vec<String>,
 }
 
 /// Physics counters for the stats overlay.
