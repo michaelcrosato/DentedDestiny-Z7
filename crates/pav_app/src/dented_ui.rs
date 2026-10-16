@@ -102,7 +102,7 @@ pub fn draw(ui: &mut egui::Ui, g: &Dented, fps: f32, ms: f32, device: Device, mo
     // FPS remains visible in every desktop menu and play mode.
     let fps_color = if fps >= 25. || fps == 0. { MUTED } else { Color32::from_rgb(238, 152, 117) };
     ink.text(1410., 28., &format!("{fps:.0} FPS  /  {ms:.1} MS"), 17., fps_color, false);
-    let gameplay = matches!(g.mode, Mode::Playing | Mode::Dead | Mode::Victory);
+    let gameplay = g.mode == Mode::Playing;
     if gameplay {
         veil(&p, Rect::from_min_max(screen.min, Pos2::new(screen.max.x, screen.min.y + 180. * k)), 100, 10);
         ink.emblem(69., 79., 25.);
@@ -127,18 +127,20 @@ pub fn draw(ui: &mut egui::Ui, g: &Dented, fps: f32, ms: f32, device: Device, mo
         ink.text(116., 764., &format!("{}  ·  {}", if pad { "□" } else { "X" }, "AMBER FLASK"), 21., GOLD, false);
         ink.text(116., 794., &format!("{} remaining", g.flasks), 20., IVORY, false);
         ink.text(49., 861., g.progress.weapon_name(), 19., IVORY, true);
-        ink.text(
-            1168.,
-            837.,
-            if pad {
-                "R1  Strike     R2  Heavy\n○  Evade     L1  Guard"
-            } else {
-                "J / LMB  Strike     K / RMB  Heavy\nSpace  Evade     Shift  Guard"
-            },
-            19.,
-            IVORY,
-            false,
-        );
+        if !g.boss_active {
+            ink.text(
+                1168.,
+                837.,
+                if pad {
+                    "R1  Strike     R2  Heavy\n○  Evade     L1  Guard"
+                } else {
+                    "J / LMB  Strike     K / RMB  Heavy\nSpace  Evade     Shift  Guard"
+                },
+                19.,
+                IVORY,
+                false,
+            );
+        }
         if !g.prompt.is_empty() && g.mode == Mode::Playing {
             ink.rect(520., 723., 560., 52., Color32::from_black_alpha(165));
             ink.centered(800., 736., &format!("{}   {}", if pad { "×" } else { "E" }, g.prompt), 23., IVORY, false);
@@ -444,5 +446,6 @@ pub fn draw(ui: &mut egui::Ui, g: &Dented, fps: f32, ms: f32, device: Device, mo
             ink.text(850., 770., &g.notice, 20., GOLD, false);
         }
     }
+    ink.text(1410., 28., &format!("{fps:.0} FPS  /  {ms:.1} MS"), 17., fps_color, false);
     selected
 }

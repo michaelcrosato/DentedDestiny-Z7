@@ -764,6 +764,7 @@ impl Dented {
         }
         if flat(p - self.rules.bell) < 3. && self.progress.guardian {
             self.progress.lore |= 4;
+            self.notice_time = 0.0;
             self.set_mode(Mode::Victory);
             self.save();
             events.push(SimEvent::LevelUp { pos: self.rules.bell });
@@ -932,7 +933,9 @@ impl Dented {
         }
     }
     pub fn objective(&self) -> &'static str {
-        if self.progress.guardian {
+        if self.progress.lore & 4 != 0 {
+            "The oath is fulfilled"
+        } else if self.progress.guardian {
             "Ring the last bell"
         } else if self.boss_active {
             "Silence Vesper, the Unrung"

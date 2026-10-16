@@ -13,3 +13,5 @@ Dented Destiny implements reusable deterministic combat/AI states, buffered acti
 Known inherited constraints: WebGPU availability varies by browser and driver; the native Linux path in this WSL environment may use software Vulkan. GPU performance must be measured on the adapter actually used. Save failures are logged, not silently claimed successful.
 
 A navigation defect surfaced in the full-route bot: fixed entities used a square footprint whose radius was the larger X/Z half extent. A wide, thin gate therefore blocked several metres of its own approach, preventing the bot from reaching an interactable door even though physics allowed it. `pav_core/src/nav.rs` now grows each axis of the rotated AABB independently. This is an engine correction, not a game-specific route workaround.
+
+The engine's low-camera `front_cut` default removes floor in front of the focus. This is useful in a side-view room but made the title camera show an apparently floating player. The abbey explicitly disables `view.cutaway.front_cut` in its level data and retains the narrower occlusion fade. A third-person preset should disable front cutting by default.

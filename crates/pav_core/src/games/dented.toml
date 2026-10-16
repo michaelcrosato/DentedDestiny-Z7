@@ -32,6 +32,7 @@ exposure = 1.1
 "filter.vignette" = 0.24
 "filter.grain" = 0.025
 "cutaway.height_cut" = false
+"cutaway.front_cut" = false
 "cutaway.fade" = true
 [params]
 "movement.speed" = 4.6

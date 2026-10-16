@@ -42,6 +42,7 @@ Cdp 'Emulation.setDeviceMetricsOverride' @{width=1920;height=1080;deviceScaleFac
 Cdp 'Page.navigate' @{url=$BuildUri}|Out-Null
 Start-Sleep -Milliseconds 1200
 WaitMode 'Title'|Out-Null
+Eval 'new Promise(r=>setTimeout(r,1800))'|Out-Null
 $adapter=Eval 'navigator.gpu.requestAdapter().then(a=>({vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}))'
 Shot 'title'
 # A standard-mapped synthetic pad exercises the browser Gamepad API and gilrs adapter.
