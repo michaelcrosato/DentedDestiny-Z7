@@ -45,6 +45,7 @@ WaitMode 'Title'|Out-Null
 Eval 'new Promise(r=>setTimeout(r,1800))'|Out-Null
 $adapter=Eval 'navigator.gpu.requestAdapter().then(a=>({vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}))'
 Shot 'title'
+Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=400;y=680;buttons=0}|Out-Null
 # A standard-mapped synthetic pad exercises the browser Gamepad API and gilrs adapter.
 Eval "window.__testErrors=[];addEventListener('error',e=>__testErrors.push(e.message));addEventListener('unhandledrejection',e=>__testErrors.push(String(e.reason)));window.__testPad={id:'DualSense Standard Test',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,touched:false,value:0}))};Object.defineProperty(navigator,'getGamepads',{value:()=>[{...__testPad,timestamp:performance.now()}]});"|Out-Null
 Start-Sleep -Milliseconds 200
@@ -102,8 +103,13 @@ for($i=0;$i -lt 190;$i++) {
 }
 $after=Eval 'JSON.parse(localStorage.getItem("dented-destiny-z7-v1"))'
 if(($before|ConvertTo-Json -Depth 20 -Compress) -ne ($after|ConvertTo-Json -Depth 20 -Compress)){throw 'Attract changed the personal save'}
-Key ' ' 'Space' 32
+# The pointer was placed over the victory menu before play. A click must only
+# cancel attract, without the release accidentally activating the title's same row.
+Cdp 'Input.dispatchMouseEvent' @{type='mousePressed';x=400;y=680;button='left';buttons=1;clickCount=1}|Out-Null
+Cdp 'Input.dispatchMouseEvent' @{type='mouseReleased';x=400;y=680;button='left';buttons=0;clickCount=1}|Out-Null
 WaitMode 'Title'|Out-Null
+$cancelled=Eval 'new Promise(r=>setTimeout(()=>r(__DENTED_DIAGNOSTICS__.mode),700))'
+if($cancelled -ne 'Title'){throw 'Demo click activated a title menu action'}
 $errors=Eval 'window.__testErrors'
 $report=@{adapter=$adapter;combat=$combat;milestones=$milestones;frames=$rows;errors=$errors;performance=($rows|Measure-Object -Property fps -Average -Minimum -Maximum);save_isolated=$true;input_cancelled=$true}
 $report|ConvertTo-Json -Depth 20|Set-Content (Join-Path $CaptureDir 'report.json')

@@ -430,8 +430,8 @@ pub fn draw(
         let y = y0 + i as f32 * 61.;
         let width = if g.mode == Mode::Rest { 680. } else { 600. };
         let r = Rect::from_min_size(ink.at(96., y), Vec2::new(width, 52.) * k);
-        let response = ui.interact(r, egui::Id::new(("dented_item", i)), egui::Sense::click());
-        if response.clicked() {
+        let response = ui.interact(r, egui::Id::new(("dented_item", g.mode as u8, i)), egui::Sense::click());
+        if response.clicked() && !g.demo {
             selected = Some(i);
         }
         let focus = g.menu == i || (response.hovered() && !pad);
