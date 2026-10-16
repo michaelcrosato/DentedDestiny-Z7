@@ -268,6 +268,7 @@ pub struct Dented {
     pub mode: Mode,
     pub return_mode: Mode,
     pub menu: usize,
+    pub menu_epoch: u64,
     pub idle: f32,
     pub time: f32,
     pub mode_time: f32,
@@ -329,6 +330,7 @@ pub fn build(sim: &mut Sim, rest: Option<&str>) -> Result<()> {
         mode: Mode::Title,
         return_mode: Mode::Title,
         menu: 0,
+        menu_epoch: 0,
         idle: 0.,
         time: 0.,
         mode_time: 0.,
@@ -408,6 +410,7 @@ fn event_hit(events: &mut Vec<SimEvent>, pos: Vec3, power: f32) {
 impl Dented {
     pub fn set_mode(&mut self, m: Mode) {
         self.mode = m;
+        self.menu_epoch = self.menu_epoch.wrapping_add(1);
         self.menu = 0;
         self.mode_time = 0.;
         self.idle = 0.;
@@ -590,9 +593,13 @@ impl Dented {
     }
     fn menu_input(&mut self, sim: &mut Sim, input: &InputFrame, events: &mut Vec<SimEvent>) {
         let mut input = *input;
-        input.pressed |= self.buffer & b::ACCEPT;
-        self.buffer &= !b::ACCEPT;
         let n = self.menu_items().len();
+        if let Some(selection) = input.menu {
+            if selection.screen == self.mode as u8 && selection.epoch == self.menu_epoch && (selection.choice as usize) < n {
+                self.menu = selection.choice as usize;
+                input.pressed |= b::ACCEPT;
+            }
+        }
         if n == 0 {
             return;
         }
@@ -986,7 +993,7 @@ impl Game for Dented {
         self.mode_time += dt;
         self.notice_time = (self.notice_time - dt).max(0.);
         self.area_time = (self.area_time - dt).max(0.);
-        let activity = raw.held != 0 || raw.pressed != 0 || raw.move_dir.length_squared() > 0.03;
+        let activity = raw.held != 0 || raw.pressed != 0 || raw.menu.is_some() || raw.move_dir.length_squared() > 0.03;
         if self.demo && activity {
             self.end_demo(sim);
             out.insert(pid, InputFrame::default());
@@ -1061,7 +1068,7 @@ impl Game for Dented {
                 self.enemies
                     .iter()
                     .enumerate()
-                    .filter(|(_, e)| e.hp > 0. && flat(e.pos - self.player_pos) < 16.)
+                    .filter(|(_, e)| e.hp > 0. && flat(e.pos - self.player_pos) < 16. && self.line_clear(self.player_pos, e.pos))
                     .min_by(|(_, a), (_, z)| flat(a.pos - self.player_pos).total_cmp(&flat(z.pos - self.player_pos)))
                     .map(|(i, _)| i)
             };
@@ -1386,7 +1393,7 @@ impl Game for Dented {
         ]
     }
     fn status(&self, _: &Sim) -> serde_json::Value {
-        json!({"mode":self.mode,"demo":self.demo,"time":self.time,"player":self.player_pos,"hp":self.hp,"stamina":self.stamina,"action":self.action,"progress":self.progress,"metrics":self.metrics,"boss_active":self.boss_active,"enemies":self.enemies.iter().map(|e|json!({"kind":e.kind,"hp":e.hp,"pos":e.pos,"intent":e.intent,"timer":e.timer,"attack":e.attack})).collect::<Vec<_>>()})
+        json!({"mode":self.mode,"menu_context":{"screen":self.mode as u8,"epoch":self.menu_epoch,"focus":self.menu,"choices":self.menu_items()},"options":self.options,"demo":self.demo,"time":self.time,"player":self.player_pos,"hp":self.hp,"stamina":self.stamina,"action":self.action,"progress":self.progress,"metrics":self.metrics,"boss_active":self.boss_active,"enemies":self.enemies.iter().map(|e|json!({"kind":e.kind,"hp":e.hp,"pos":e.pos,"intent":e.intent,"timer":e.timer,"attack":e.attack})).collect::<Vec<_>>()})
     }
     fn outcome(&self) -> Outcome {
         if self.mode == Mode::Victory {

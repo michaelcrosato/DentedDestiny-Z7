@@ -272,6 +272,7 @@ impl Clock {
                 let mut i = sh.input.lock().unwrap();
                 let mut frame = *i;
                 i.pressed = 0;
+                i.menu = None;
                 frame.cmd = sh.cmds.lock().unwrap().pop_front();
                 frame
             };

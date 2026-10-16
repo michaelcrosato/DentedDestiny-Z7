@@ -10,9 +10,9 @@ All mutable gameplay belongs to `Dented` in `SimState.play`, with `Clone` and se
 
 The reusable enemy flow is Idle / Chase / Windup / Recover / Stagger / Dead. A strike has one damage activation per committed action. Player action buffering, stamina gates, guard direction, parry window, roll invulnerability and hit immunity are independent state variables. Extend this state machine when adding an archetype. Teach the bot each new mechanic; do not bypass damage, currency or doors for demo play.
 
-Progress includes checkpoint, upgrades, currency, equipment, unlocks, boss defeat and the death cache. Rest respawns ordinary enemies. Save changes at progression milestones, while demo saves are suppressed. Adding a save field needs a safe default; breaking format changes need a new version and migration.
+Progress includes checkpoint, upgrades, currency, equipment, unlocks, boss defeat and the death cache. Rest respawns ordinary enemies. Save changes at progression milestones, while demo and practice saves are suppressed. Falling places the death cache at the last walkable grounded position. Adding a save field needs a safe default; breaking format changes need a new version and migration.
 
-Menu focus is simulation state. Device adapters translate into input bits; no desktop-only gameplay actions. Menus pause game decisions. `ACTIVITY` represents physical input even if it has no action binding, and cancels the attract loop before the same event can start play.
+Menu focus is simulation state. Device adapters translate into input bits; pointer selections use the recorded `InputFrame.menu` payload with a screen/epoch context stamp. The CLI `play` status exposes the current menu context and choices. No desktop-only gameplay actions: mouse movement does not independently aim the character. Menus pause game decisions. `ACTIVITY` represents physical input even if it has no action binding, and cancels the attract loop before the same event can start play.
 
 Attract uses `Game::bot` against real combat and movement, preserving a copy of personal progression. Death and victory linger, then the run resets. Input returns to the title. The engine already bounds replay recording and rewind history.
 

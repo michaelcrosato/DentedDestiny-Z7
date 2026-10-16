@@ -257,6 +257,8 @@ fn bot_does_not_oscillate_between_a_gate_and_an_unseen_enemy() {
     for e in g.enemies.iter_mut().take(5) {
         e.hp = 0.0;
     }
+    tap(&mut s, b::SKILL3);
+    assert!(game(&s).locked.is_none(), "an unseen enemy should not take lock-on focus");
     // This position straddles the northern lancer's previous 10 m perception threshold.
     // It must reach the gate rather than switch between two opposing steering directions.
     for _ in 0..1800 {
@@ -327,4 +329,25 @@ fn falling_drops_echoes_on_reachable_ground_even_during_invulnerability() {
     assert_eq!(echoes, 91);
     assert_eq!(drop, safe);
     assert!(nav.walkable(drop));
+}
+
+#[test]
+fn pointer_menu_commands_replay_and_stale_contexts_are_rejected() {
+    use pav_core::input::MenuSelection;
+    let mut s = Sim::new("dented", 13).unwrap();
+    let old = MenuSelection { screen: Mode::Title as u8, epoch: game(&s).menu_epoch, choice: 0 };
+    s.step(&InputFrame { menu: Some(old), ..Default::default() });
+    assert_eq!(game(&s).mode, Mode::Playing);
+    tap(&mut s, b::MENU);
+    let back = MenuSelection { screen: Mode::Pause as u8, epoch: game(&s).menu_epoch, choice: 4 };
+    s.step(&InputFrame { menu: Some(back), ..Default::default() });
+    assert_eq!(game(&s).mode, Mode::Title);
+    s.step(&InputFrame { menu: Some(MenuSelection { choice: 1, ..old }), ..Default::default() });
+    assert_eq!(game(&s).mode, Mode::Title);
+    assert!(game(&s).progress.started);
+    let mut replay = Sim::new("dented", 13).unwrap();
+    for input in s.recording.iter() {
+        replay.step(input);
+    }
+    assert_eq!(s.state_hash(), replay.state_hash());
 }

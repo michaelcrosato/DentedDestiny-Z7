@@ -1022,7 +1022,7 @@ impl App {
             if self.input.last_device == Device::Gamepad && g.mode == pav_core::games::dented::Mode::Playing {
                 self.rig.params.yaw =
                     (self.rig.params.yaw - self.input.pad.right.x * 110.0 * dt + 540.0).rem_euclid(360.0) - 180.0;
-                self.rig.params.tilt = (self.rig.params.tilt + self.input.pad.right.y * 70.0 * dt).clamp(16.0, 65.0);
+                self.rig.params.tilt = (self.rig.params.tilt - self.input.pad.right.y * 70.0 * dt).clamp(16.0, 65.0);
             }
         }
         let studio_mode = curr.studio_mode();
@@ -1252,7 +1252,7 @@ impl App {
             held &= !pav_core::input::buttons::PRIMARY;
             pressed &= !pav_core::input::buttons::PRIMARY;
         }
-        let aim = if self.input.dented && self.input.last_device != Device::KeyboardMouse {
+        let aim = if self.input.dented {
             None
         } else {
             match self.input.last_device {
@@ -1650,16 +1650,10 @@ impl App {
                 );
             }
         });
-        if let Some(choice) = dented_choice {
-            if choice == 99 {
-                host.shared.input.lock().unwrap().pressed |= pav_core::input::buttons::MENU;
-            } else {
-                host.exec(move |sim| {
-                    if let Some(g) = sim.state.play.as_mut().and_then(|p| p.get_mut::<pav_core::games::dented::Dented>()) {
-                        g.menu = choice;
-                        g.buffer |= pav_core::input::buttons::ACCEPT;
-                    }
-                });
+        if let (Some(choice), Some(g)) = (dented_choice, &curr.hud.dented) {
+            if !g.demo {
+                host.shared.input.lock().unwrap().menu =
+                    Some(pav_core::input::MenuSelection { screen: g.mode as u8, epoch: g.menu_epoch, choice: choice as u8 });
             }
         }
         if prefs != self.prefs {
@@ -2350,7 +2344,8 @@ impl ApplicationHandler for App {
                 if self.mouse.right_down {
                     let d = p - self.mouse.pos;
                     self.rig.params.yaw = (self.rig.params.yaw - d.x * 0.3 + 540.0).rem_euclid(360.0) - 180.0;
-                    self.rig.params.tilt = (self.rig.params.tilt + d.y * 0.2).clamp(0.0, 90.0);
+                    self.rig.params.tilt = (self.rig.params.tilt + d.y * 0.2)
+                        .clamp(if self.input.dented { 16.0 } else { 0.0 }, if self.input.dented { 65.0 } else { 90.0 });
                 }
                 if (p - self.mouse.pos).length() > 2.0 {
                     self.input.last_device = Device::KeyboardMouse;

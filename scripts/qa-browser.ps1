@@ -81,6 +81,17 @@ Pad 13
 Pad 0
 WaitMode 'Settings'|Out-Null
 Shot 'settings'
+# Pointer and keyboard confirmation share one focus model and each activate exactly once.
+$aid=Eval '__DENTED_DIAGNOSTICS__.options.assist'
+Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=400;y=360;buttons=0}|Out-Null
+Cdp 'Input.dispatchMouseEvent' @{type='mousePressed';x=400;y=360;button='left';buttons=1;clickCount=1}|Out-Null
+Cdp 'Input.dispatchMouseEvent' @{type='mouseReleased';x=400;y=360;button='left';buttons=0;clickCount=1}|Out-Null
+Eval 'new Promise(r=>setTimeout(r,300))'|Out-Null
+if((Eval '__DENTED_DIAGNOSTICS__.options.assist') -eq $aid){throw 'Pointer menu activation failed'}
+Key 'Enter' 'Enter' 13
+Eval 'new Promise(r=>setTimeout(r,300))'|Out-Null
+if((Eval '__DENTED_DIAGNOSTICS__.options.assist') -ne $aid){throw 'Keyboard confirmation double-fired or failed after a pointer selection'}
+Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=400;y=680;buttons=0}|Out-Null
 Pad 0
 Pad 1
 WaitMode 'Pause'|Out-Null

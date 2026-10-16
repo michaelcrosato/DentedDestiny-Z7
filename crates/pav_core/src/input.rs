@@ -65,6 +65,14 @@ pub mod buttons {
     }
 }
 
+/// A pointer selection in a game's current menu. The context stamp rejects stale UI events.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MenuSelection {
+    pub screen: u8,
+    pub epoch: u64,
+    pub choice: u8,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct InputFrame {
     /// Desired movement on the ground plane: x = world +X, y = world +Z. Length <= 1.
@@ -84,6 +92,9 @@ pub struct InputFrame {
     /// A menu action this tick (Shardfall: equip, sell, travel...), queued one per tick.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cmd: Option<crate::arpg::GameCmd>,
+    /// Generic game-hook menu input, recorded with every other action.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub menu: Option<MenuSelection>,
 }
 
 impl InputFrame {
