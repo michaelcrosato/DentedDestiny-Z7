@@ -434,7 +434,7 @@ pub fn draw(
         if response.clicked() {
             selected = Some(i);
         }
-        let focus = g.menu == i || response.hovered();
+        let focus = g.menu == i || (response.hovered() && !pad);
         if focus {
             ink.rect(96., y, width, 52., Color32::from_rgba_unmultiplied(126, 109, 65, 38));
             ink.line(96., y, width, Color32::from_rgba_unmultiplied(185, 158, 96, 120));
