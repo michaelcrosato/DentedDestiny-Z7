@@ -227,6 +227,8 @@ fn attract_repeats_actual_runs_without_changing_the_saved_pilgrimage() {
     let mut s = Sim::new("dented", 11).unwrap();
     let personal = Progress { started: true, echoes: 123, vigor: 2, shortcut: true, ..Default::default() };
     game_mut(&mut s).progress = personal.clone();
+    game_mut(&mut s).time = 57.0;
+    game_mut(&mut s).metrics.lights = 9;
     for _ in 0..60 * 600 {
         s.step(&InputFrame::default());
         if game(&s).metrics.cycles >= 2 {
@@ -238,4 +240,6 @@ fn attract_repeats_actual_runs_without_changing_the_saved_pilgrimage() {
     tap(&mut s, b::ACTIVITY);
     assert_eq!(game(&s).mode, Mode::Title);
     assert_eq!(serde_json::to_value(&game(&s).progress).unwrap(), serde_json::to_value(personal).unwrap());
+    assert_eq!(game(&s).time, 57.0);
+    assert_eq!(game(&s).metrics.lights, 9);
 }

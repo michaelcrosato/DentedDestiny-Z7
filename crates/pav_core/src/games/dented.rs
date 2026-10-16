@@ -254,6 +254,13 @@ pub struct Metrics {
     pub cycles: u32,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DemoBackup {
+    pub progress: Progress,
+    pub time: f32,
+    pub metrics: Metrics,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Dented {
     pub rules: Rules,
     pub progress: Progress,
@@ -265,7 +272,7 @@ pub struct Dented {
     pub time: f32,
     pub mode_time: f32,
     pub demo: bool,
-    pub demo_backup: Option<Progress>,
+    pub demo_backup: Option<DemoBackup>,
     pub lab: bool,
     pub hp: f32,
     pub stamina: f32,
@@ -508,7 +515,7 @@ impl Dented {
         self.set_mode(Mode::Title);
     }
     fn start_demo(&mut self, sim: &mut Sim) {
-        self.demo_backup = Some(self.progress.clone());
+        self.demo_backup = Some(DemoBackup { progress: self.progress.clone(), time: self.time, metrics: self.metrics.clone() });
         self.demo = true;
         let cycles = self.metrics.cycles;
         self.begin(sim, true);
@@ -516,9 +523,15 @@ impl Dented {
         self.announce("A pilgrim walks where bells no longer ring.");
     }
     fn end_demo(&mut self, sim: &mut Sim) {
-        let p = self.demo_backup.take().unwrap_or_default();
-        let started = p.started;
-        self.progress = p;
+        let backup = self.demo_backup.take().unwrap_or(DemoBackup {
+            progress: Progress::default(),
+            time: 0.0,
+            metrics: Metrics::default(),
+        });
+        let started = backup.progress.started;
+        self.progress = backup.progress;
+        self.time = backup.time;
+        self.metrics = backup.metrics;
         self.begin(sim, false);
         self.progress.started = started;
         self.demo = false;
