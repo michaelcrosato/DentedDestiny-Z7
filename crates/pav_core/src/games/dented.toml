@@ -1,0 +1,203 @@
+name = "The Bellwether Abbey"
+about = "Dented Destiny — one oath, one ruined abbey, one last bell."
+entrance = { at = [20, 56], facing = "south" }
+primary_device = "gamepad"
+height = 35
+[camera]
+tilt = 32.0
+distance = 12.0
+fov = 58.0
+height_offset = 1.2
+follow_lag = 0.10
+[view]
+sky = "#19252a"
+"light.sun_elevation" = 18.0
+"light.sun_azimuth" = 225.0
+"light.sun_intensity" = 1.35
+"light.ambient" = 0.50
+"light.shadows" = true
+"light.shadow_radius" = 35.0
+bloom = 0.38
+bloom_threshold = 1.15
+fog = true
+fog_start = 35.0
+fog_end = 85.0
+haze = 0.25
+haze_height = 3.0
+shafts = 0.25
+halos = 0.3
+outlines = false
+saturation = 1.05
+exposure = 1.1
+"filter.vignette" = 0.24
+"filter.grain" = 0.025
+"cutaway.height_cut" = false
+"cutaway.fade" = true
+[params]
+"movement.speed" = 4.6
+"movement.jump_height" = 1.2
+"movement.ledge_grab" = false
+[keys]
+primary = ["KeyJ"]
+secondary = ["KeyK"]
+dodge = ["Space"]
+focus = ["ShiftLeft"]
+skill3 = ["KeyR"]
+skill4 = ["KeyF"]
+potion = ["KeyX"]
+interact = ["KeyE"]
+accept = ["Enter"]
+back = ["Backspace"]
+menu = ["Escape"]
+kit = ["KeyQ"]
+journal = ["Tab"]
+up = ["ArrowUp", "KeyW"]
+down = ["ArrowDown", "KeyS"]
+prev = ["ArrowLeft"]
+next = ["ArrowRight"]
+jump = ["KeyV"]
+[layout]
+origin = [-20.5, 0.0, -28.5]
+[[layout.layer]]
+y = 0
+map = '''
+#########################################
+b.......m.........sssss.......m.........b
+b....m..........m.sssss....m..........m.b
+b.m..........m....sssss.m..........m....b
+b.........m.......sssss.........m.......b
+b......m..........sssss......m..........b
+b...m..........m..sssss...m..........m..b
+bm..........m.....sssssm..........m.....b
+b........m........sssss........m........b
+b.....m..........msssss.....m..........mb
+b..m..........m...sssss..m..........m...b
+b..........m......sssss..........m......b
+b.......m.........sssss.......m.........b
+b....m..........m.sssss....m..........m.b
+b.m..........m....sssss.m..........m....b
+b.........m.......sssss.........m.......b
+b################.sssss.################b
+b...m..........m..sssss...m..........m..b
+bm..........m.....sssssm..........m.....b
+b........m........sssss........m........b
+b.....m..........msssss.....m..........mb
+b..m..........m...sssss..m..........m...b
+b..........m......sssss..........m......b
+b.......m.........sssss.......m.........b
+b....m..........m.sssss....m..........m.b
+b.m..........m....sssss.m..........m....b
+b.........m.......sssss.........m.......b
+b......m..........sssss......m..........b
+b...m..........m..sssss...m..........m..b
+bm..........m.....sssssm..........m.....b
+b........m........sssss........m........b
+b#####m....#######sssss#######.....#####b
+b..m.......#..m...sssss..m...#......m...b
+b..........#......sssss......#...m......b
+b.......m..#......sssss......#m.........b
+b....m.....#....m.sssss....m.#........m.b
+b.m........#.m....sssss.m....#.....m....b
+b.........m#......sssss......#..m.......b
+b......m...#......sssss......#..........b
+b...m..........m..sssss...m..........m..b
+bm..........m.....sssssm..........m.....b
+b........m........sssss........m........b
+b.....m..........msssss.....m..........mb
+b..m..........m...sssss..m..........m...b
+b..........#......sssss......#...m......b
+b.......m..#......sssss......#m.........b
+b....m..........m.sssss....m..........m.b
+b.m..........m....sssss.m..........m....b
+b.........m.......sssss.........m.......b
+b......m..........sssss......m..........b
+b...m..........m..sssss...m..........m..b
+bm..........m.....ssPssm..........m.....b
+b........m........sssss........m........b
+b.....m..........msssss.....m..........mb
+b..m..........m...sssss..m..........m...b
+b..........m......sssss..........m......b
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+'''
+[layout.legend.'.']
+blocks = [{ y0 = -0.6, y1 = 0, color = "#666960", look = "lit" }]
+[layout.legend.'s']
+blocks = [{ y0 = -0.6, y1 = 0, color = "#838174", look = "lit" }]
+[layout.legend.'m']
+blocks = [{ y0 = -0.6, y1 = 0, color = "#515e4d", look = "lit" }]
+[layout.legend.'#']
+blocks = [{ y0 = -0.7, y1 = 3.0, color = "#575d57", look = "lit" }]
+[layout.legend.'b']
+blocks = [{ y0 = -0.7, y1 = 0.8, color = "#575d57", look = "lit" }]
+[layout.legend.'P']
+blocks = [{ y0 = -0.6, y1 = 0, color = "#838174", look = "lit" }]
+marker = "player"
+[game]
+# Landmarks are content data; subsequent chapters reuse the same rule/state machines.
+shrines = [[0.0, 0.0, 23.0], [0.0, 0.0, -6.0]]
+reliquary = [-13.0, 0.0, 10.0]
+chime = [13.0, 0.0, 0.0]
+lever = [-12.0, 0.0, -6.0]
+gate = [0.0, 0.0, 3.0]
+fog = [0.0, 0.0, -12.0]
+bell = [0.0, 0.0, -24.0]
+speed = 4.6
+light_damage = 25.0
+heavy_damage = 48.0
+regen = 30.0
+
+[[game.encounters]]
+kind = "Warden"
+at = [-3, 0, 16]
+hp = 85.0
+reward = 45
+sight = 8.0
+
+[[game.encounters]]
+kind = "Lancer"
+at = [4, 0, 11]
+hp = 110.0
+reward = 60
+sight = 8.0
+
+[[game.encounters]]
+kind = "Warden"
+at = [-13, 0, 14]
+hp = 85.0
+reward = 45
+sight = 8.0
+
+[[game.encounters]]
+kind = "Cantor"
+at = [13, 0, 1]
+hp = 75.0
+reward = 65
+sight = 11.0
+
+[[game.encounters]]
+kind = "Warden"
+at = [13, 0, 8]
+hp = 85.0
+reward = 45
+sight = 8.0
+
+[[game.encounters]]
+kind = "Lancer"
+at = [3, 0, -3]
+hp = 115.0
+reward = 70
+sight = 8.0
+
+[[game.encounters]]
+kind = "Warden"
+at = [-8, 0, -5]
+hp = 90.0
+reward = 50
+sight = 8.0
+
+[[game.encounters]]
+kind = "Guardian"
+at = [0, 0, -21]
+hp = 650.0
+reward = 400
+sight = 15.0

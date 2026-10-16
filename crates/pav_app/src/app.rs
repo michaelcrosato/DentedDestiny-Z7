@@ -187,6 +187,7 @@ pub struct App {
     pad_events: Vec<egui::Event>,
     pad_buttons: (bool, bool, bool),
     game_frame: Option<std::sync::Arc<pav_core::arpg::GameFrame>>,
+    dented_saved: u64,
     game_place: Option<pav_core::arpg::Place>,
     /// Phones and tablets: fingers, the on-screen controls and swipes (touch.rs).
     touch: crate::touch::Touch,
@@ -274,6 +275,7 @@ impl App {
             pad_events: Vec::new(),
             pad_buttons: (false, false, false),
             game_frame: None,
+            dented_saved: 0,
             game_place: None,
             touch: Default::default(),
             touch_screen,
@@ -352,7 +354,7 @@ impl App {
     fn init(&mut self, el: &ActiveEventLoop) -> Result<()> {
         let s = self.settings.clone();
         let window = stage("window", || {
-            let mut attrs = Window::default_attributes().with_title("Shardfall");
+            let mut attrs = Window::default_attributes().with_title("Dented Destiny — The Bellwether Abbey");
             #[cfg(not(target_arch = "wasm32"))]
             {
                 attrs = attrs.with_inner_size(winit::dpi::LogicalSize::new(s.width, s.height));
@@ -395,6 +397,7 @@ impl App {
     fn finish_init(&mut self, gfx: Gfx) -> Result<()> {
         let s = self.settings.clone();
         let window = gfx.window.clone();
+        crate::dented_ui::install_fonts(&self.egui_ctx);
         let egui_state = stage("ui", || {
             let st = UiInput::new(&self.egui_ctx, &window, gfx.device.limits().max_texture_dimension_2d as usize);
             Ok((st, String::new()))
@@ -432,6 +435,7 @@ impl App {
             if let Some(level) = crate::save::restore_into(&mut sim) {
                 d += &format!(", saved hero (level {level})");
             }
+            crate::dented_save::restore(&mut sim);
             Ok((sim, d))
         })?;
         if s.animation_studio {
@@ -543,6 +547,10 @@ impl App {
     /// while a window is open the left stick (or D-pad) moves a cursor, A and X click left and
     /// right, the right stick scrolls, and the game gets no pad input.
     fn pad_menus(&mut self, dt: f32) {
+        if self.input.dented {
+            self.pad_cursor = None;
+            return;
+        }
         use gilrs::Button as B;
         let taps = std::mem::take(&mut self.input.pad.taps);
         let game = self.game_frame.is_some();
@@ -776,6 +784,9 @@ impl App {
 
     /// The fixed system layer: never rebinds, works in every room.
     fn handle_key(&mut self, code: KeyCode) {
+        if self.input.dented && !matches!(code, KeyCode::F11 | KeyCode::F12) {
+            return;
+        }
         let Some(host) = &self.host else { return };
         if self.studio_mode == StudioMode::Animation {
             if let Some(p) = host.frames().1.animation_preview.as_ref() {
@@ -972,11 +983,11 @@ impl App {
 
         // Devices.
         self.input.poll_gamepad();
-        if self.input.pad.start_pressed {
+        if self.input.pad.start_pressed && !self.input.dented {
             let open = !self.menu_open;
             self.set_menu(open);
         }
-        if self.input.pad.map_pressed {
+        if self.input.pad.map_pressed && !self.input.dented {
             self.game_ui.map = !self.game_ui.map;
         }
         self.pad_menus(dt);
@@ -997,10 +1008,23 @@ impl App {
         }
         let ui_wants_keys = self.egui_ctx.egui_wants_keyboard_input();
         let game_input = !self.menu_open && !ui_wants_keys;
-        let rewinding = game_input && self.studio_mode == StudioMode::World && self.input.rewind_held();
+        let rewinding = game_input && !self.input.dented && self.studio_mode == StudioMode::World && self.input.rewind_held();
         host.set_control(|c| c.rewinding = rewinding);
 
         let (prev, curr, curr_at, tick_wall) = host.frames();
+        self.input.dented = curr.hud.dented.is_some();
+        if let Some(g) = &curr.hud.dented {
+            if g.save_serial != self.dented_saved && !g.demo {
+                self.dented_saved = g.save_serial;
+                crate::dented_save::save(g);
+            }
+            self.audio_settings.sfx = if g.options.sound { 0.65 } else { 0.0 };
+            if self.input.last_device == Device::Gamepad && g.mode == pav_core::games::dented::Mode::Playing {
+                self.rig.params.yaw =
+                    (self.rig.params.yaw - self.input.pad.right.x * 110.0 * dt + 540.0).rem_euclid(360.0) - 180.0;
+                self.rig.params.tilt = (self.rig.params.tilt + self.input.pad.right.y * 70.0 * dt).clamp(16.0, 65.0);
+            }
+        }
         let studio_mode = curr.studio_mode();
         let studio_active = curr.studio_active();
         self.studio_navigation |= studio_active;
@@ -1138,7 +1162,32 @@ impl App {
             self.rig = CameraRig::new(self.rig.params.clone());
             self.rig.snap(curr.focus);
         }
-        let focus = prev.focus.lerp(curr.focus, alpha);
+        let mut focus = prev.focus.lerp(curr.focus, alpha);
+        if let Some(g) = &curr.hud.dented {
+            if g.mode == pav_core::games::dented::Mode::Title
+                || (matches!(g.mode, pav_core::games::dented::Mode::Settings | pav_core::games::dented::Mode::Guide)
+                    && g.return_mode == pav_core::games::dented::Mode::Title)
+            {
+                focus = Vec3::new(0.0, 2.0, 12.0);
+                self.rig.params.yaw = -13.0;
+                self.rig.params.tilt = 15.0;
+                self.rig.params.distance = 22.0;
+            } else {
+                self.rig.params.distance = if g.options.camera == 1 { 20.0 } else { 12.0 };
+                if self.rig.params.tilt < 16.0 {
+                    self.rig.params.tilt = 32.0;
+                }
+                if g.options.camera == 1 {
+                    self.rig.params.tilt = 57.0;
+                }
+                if let Some(e) = g.locked.and_then(|i| g.enemies.get(i)) {
+                    focus = focus.lerp(e.pos + Vec3::Y, 0.22);
+                }
+                if g.options.shake && g.flash > 0.0 {
+                    focus.x += (curr.time as f32 * 92.0).sin() * g.flash * 0.16;
+                }
+            }
+        }
         let player = curr.player.and_then(|id| curr.objects.iter().find(|o| o.id == id));
         let feet = player.and_then(|p| p.puppet.as_ref().map(|pp| p.pos - Vec3::Y * pp.feet_offset)).unwrap_or(focus);
         let facing = player.and_then(|p| p.puppet.as_ref().map(|pp| pp.state.facing)).unwrap_or(0.0);
@@ -1180,18 +1229,22 @@ impl App {
             held &= !pav_core::input::buttons::PRIMARY;
             pressed &= !pav_core::input::buttons::PRIMARY;
         }
-        let aim = match self.input.last_device {
-            Device::KeyboardMouse => self.rig.ground_point(self.input.cursor, size, feet.y),
-            Device::Gamepad => {
-                let r = self.input.pad.right;
-                if r.length() > 0.2 {
-                    let d = self.rig.relative_move(r);
-                    Some(feet + Vec3::new(d.x, 0.0, d.y) * self.sim_config.bombs.throw_range * r.length().min(1.0))
-                } else {
-                    Some(feet + Vec3::new(facing.sin(), 0.0, facing.cos()) * 4.0)
+        let aim = if self.input.dented && self.input.last_device != Device::KeyboardMouse {
+            None
+        } else {
+            match self.input.last_device {
+                Device::KeyboardMouse => self.rig.ground_point(self.input.cursor, size, feet.y),
+                Device::Gamepad => {
+                    let r = self.input.pad.right;
+                    if r.length() > 0.2 {
+                        let d = self.rig.relative_move(r);
+                        Some(feet + Vec3::new(d.x, 0.0, d.y) * self.sim_config.bombs.throw_range * r.length().min(1.0))
+                    } else {
+                        Some(feet + Vec3::new(facing.sin(), 0.0, facing.cos()) * 4.0)
+                    }
                 }
+                Device::Touch => intent.aim.or(Some(feet + Vec3::new(facing.sin(), 0.0, facing.cos()) * 4.0)),
             }
-            Device::Touch => intent.aim.or(Some(feet + Vec3::new(facing.sin(), 0.0, facing.cos()) * 4.0)),
         };
         {
             let mut i = host.shared.input.lock().unwrap();
@@ -1204,6 +1257,9 @@ impl App {
                 };
                 i.held = held;
                 i.pressed |= pressed;
+                if self.input.dented && self.input.pad.any_activity {
+                    i.pressed |= pav_core::input::buttons::ACTIVITY;
+                }
                 i.aim = aim;
                 if let Some(t) = self.latency.pending.take() {
                     host.shared.input_stamp.lock().unwrap().get_or_insert(t);
@@ -1274,7 +1330,13 @@ impl App {
                 scene.meshes.push(mark(feet.lerp(a, k as f32 / n as f32), 0.14, Vec3::new(1.0, 0.9, 0.7)));
             }
         }
-        if self.app_settings.aim_marker && game_input && curr.player.is_some() && !self.editor.on && curr.game.is_none() {
+        if self.app_settings.aim_marker
+            && game_input
+            && curr.player.is_some()
+            && !self.editor.on
+            && curr.game.is_none()
+            && curr.hud.dented.is_none()
+        {
             if let Some(a) = aim {
                 let d = Vec2::new(a.x - feet.x, a.z - feet.z);
                 let a = if d.length() > self.sim_config.bombs.throw_range {
@@ -1302,6 +1364,10 @@ impl App {
         }
 
         // UI.
+        #[cfg(target_arch = "wasm32")]
+        if let Some(g) = &curr.hud.dented {
+            crate::dented_save::publish_diagnostics(g, self.fps.fps, self.fps.frame_ms, &self.gfx.as_ref().unwrap().adapter_name);
+        }
         let stats = *host.shared.stats.lock().unwrap();
         let mut ctl = host.control();
         let ctl_before = ctl;
@@ -1406,10 +1472,16 @@ impl App {
         let guide = &mut self.guide;
         let mut guide_out = Vec::new();
         let mut game_cmds = Vec::new();
+        let mut dented_choice = None;
+        let dented_mobile = self.touch_screen;
         let out = self.egui_ctx.run_ui(raw, |ui| {
             let ctx = ui.ctx().clone();
             if let Some(c) = &info.crash {
                 ui::crash_banner(ui, c);
+            }
+            if let Some(g) = &curr.hud.dented {
+                dented_choice = crate::dented_ui::draw(ui, g, info.fps, info.frame_ms, device, dented_mobile, view_proj);
+                return;
             }
             panel_actions = panel.ui(ui, &mut root, &mut ctl, &stats);
             let free = ui.available_rect_before_wrap();
@@ -1545,6 +1617,18 @@ impl App {
                 );
             }
         });
+        if let Some(choice) = dented_choice {
+            if choice == 99 {
+                host.shared.input.lock().unwrap().pressed |= pav_core::input::buttons::MENU;
+            } else {
+                host.exec(move |sim| {
+                    if let Some(g) = sim.state.play.as_mut().and_then(|p| p.get_mut::<pav_core::games::dented::Dented>()) {
+                        g.menu = choice;
+                        g.buffer |= pav_core::input::buttons::ACCEPT;
+                    }
+                });
+            }
+        }
         if prefs != self.prefs {
             self.prefs = prefs;
             crate::save::save_prefs(&self.prefs);
@@ -2127,6 +2211,20 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        if self.input.dented
+            && matches!(
+                &event,
+                WindowEvent::KeyboardInput { .. }
+                    | WindowEvent::MouseInput { .. }
+                    | WindowEvent::MouseWheel { .. }
+                    | WindowEvent::CursorMoved { .. }
+                    | WindowEvent::Touch(_)
+            )
+        {
+            if let Some(host) = &self.host {
+                host.shared.input.lock().unwrap().pressed |= pav_core::input::buttons::ACTIVITY;
+            }
+        }
         if let WindowEvent::Touch(t) = &event {
             self.on_touch(t, &event);
             return;
@@ -2203,7 +2301,7 @@ impl ApplicationHandler for App {
                     self.latency.press();
                 }
                 // In the game the right button is a skill; the middle button turns the camera.
-                let turn = if self.input.game && self.studio_mode == StudioMode::World {
+                let turn = if (self.input.game || self.input.dented) && self.studio_mode == StudioMode::World {
                     MouseButton::Middle
                 } else {
                     MouseButton::Right

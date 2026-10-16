@@ -253,6 +253,8 @@ pub struct HudFrame {
     pub pad_note: Option<(String, String, u64)>,
     /// A `games` game's HUD lines (`Game::hud`).
     pub lines: Vec<String>,
+    /// Dented Destiny's immutable presentation snapshot. Gameplay remains in SimState.
+    pub dented: Option<std::sync::Arc<crate::games::dented::Dented>>,
 }
 
 /// Physics counters for the stats overlay.

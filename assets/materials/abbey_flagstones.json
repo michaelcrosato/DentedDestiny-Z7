@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "name": "abbey_flagstones",
+  "unit": "cm",
+  "description": "Weathered abbey limestone with restrained moss in the joints.",
+  "tags": [
+    "stone",
+    "abbey",
+    "floor"
+  ],
+  "source": {
+    "library": "own",
+    "license": "CC0-1.0",
+    "author": "Dented Destiny contributors"
+  },
+  "color": "#777b70",
+  "look": "lit",
+  "roughness": 0.88,
+  "layers": [
+    {
+      "type": "cobbles",
+      "size": 75,
+      "jitter": 0.45,
+      "gap": 2.5,
+      "bevel": 3,
+      "vary": 0.12,
+      "cavity": 0.35
+    },
+    {
+      "type": "noise",
+      "size": 25,
+      "detail": 2,
+      "cover": 0.7,
+      "color": "#3d4b36",
+      "strength": 0.7,
+      "masked_by": "prev"
+    },
+    {
+      "type": "noise",
+      "size": 100,
+      "cover": 0.15,
+      "color": "#53624c",
+      "strength": 0.4,
+      "facing": "up"
+    }
+  ]
+}

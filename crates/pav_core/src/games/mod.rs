@@ -19,11 +19,17 @@ use crate::frame::SimEvent;
 use crate::input::InputFrame;
 use crate::sim::Sim;
 
+pub mod dented;
 pub mod starter;
 
 /// Every game the engine knows. `load scene=<key>` (or `<key>/<rest>`) builds it.
-pub static GAMES: &[Entry] =
-    &[entry::<starter::Starter>("Starter: collect every shard while slimes chase you (the template to copy).", starter::build)];
+pub static GAMES: &[Entry] = &[
+    entry::<starter::Starter>("Starter: collect every shard while slimes chase you (the template to copy).", starter::build),
+    entry::<dented::Dented>(
+        "Dented Destiny: master the Bellwether Abbey. /play starts immediately; /lab is the proving ground.",
+        dented::build,
+    ),
+];
 
 /// Still playing, won or lost.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

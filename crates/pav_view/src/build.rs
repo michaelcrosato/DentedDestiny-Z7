@@ -1357,6 +1357,14 @@ impl ViewBuilder {
         let mut puppets = Vec::new();
         let mut scenery = Vec::new();
         for o in interpolate(prev, curr, alpha) {
+            if let Some(g) = &curr.hud.dented {
+                if o.puppet.is_some()
+                    || g.scenery.contains(&o.id)
+                    || [g.gate_entity, g.shortcut_entity, g.fog_entity].contains(&Some(o.id))
+                {
+                    continue;
+                }
+            }
             let v = &o.visual;
             if o.puppet.is_some() {
                 puppets.push(o.id.0 + 2);
@@ -1434,6 +1442,7 @@ impl ViewBuilder {
         if let Some(g) = &curr.game {
             self.arpg.emit(&mut scene, curr, g, alpha, time, dt, settings.particles, cam_fwd);
         }
+        crate::dented::emit(&mut scene, prev, curr, alpha, time, &mut lock(&self.materials));
         // Projectiles: drawn where they are between ticks (they move in straight lines).
         let back = (1.0 - alpha) * curr.dt;
         for p in &curr.projectiles {

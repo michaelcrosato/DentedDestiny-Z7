@@ -2267,6 +2267,7 @@ dependencies = [
  "egui-wgpu",
  "egui-winit",
  "gilrs",
+ "js-sys",
  "glam 0.33.11",
  "log",
  "notify",

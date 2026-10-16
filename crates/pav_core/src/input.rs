@@ -21,6 +21,16 @@ pub mod buttons {
     pub const SKILL6: u32 = 1 << 12;
     pub const DODGE: u32 = 1 << 13;
     pub const POTION: u32 = 1 << 14;
+    pub const MENU: u32 = 1 << 15;
+    pub const ACCEPT: u32 = 1 << 16;
+    pub const BACK: u32 = 1 << 17;
+    pub const NEXT: u32 = 1 << 18;
+    pub const PREV: u32 = 1 << 19;
+    pub const ACTIVITY: u32 = 1 << 20;
+    pub const KIT: u32 = 1 << 21;
+    pub const JOURNAL: u32 = 1 << 22;
+    pub const UP: u32 = 1 << 23;
+    pub const DOWN: u32 = 1 << 24;
 
     pub const NAMES: &[(&str, u32)] = &[
         ("jump", JUMP),
@@ -38,6 +48,16 @@ pub mod buttons {
         ("skill6", SKILL6),
         ("dodge", DODGE),
         ("potion", POTION),
+        ("menu", MENU),
+        ("accept", ACCEPT),
+        ("back", BACK),
+        ("next", NEXT),
+        ("prev", PREV),
+        ("activity", ACTIVITY),
+        ("kit", KIT),
+        ("journal", JOURNAL),
+        ("up", UP),
+        ("down", DOWN),
     ];
 
     pub fn from_name(n: &str) -> Option<u32> {

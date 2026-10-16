@@ -126,8 +126,12 @@ impl NavGrid {
             if e.pos.y - he.y > 1.6 || e.pos.y + he.y < 0.3 {
                 continue;
             }
-            let r = he.x.max(he.z) + radius;
-            mark(&mut solid, Vec2::new(e.pos.x - r, e.pos.z - r), Vec2::new(e.pos.x + r, e.pos.z + r), true);
+            // Grow the actual rotated footprint, not a square with the longest side.
+            // Wide thin doors otherwise block several metres of approach to an interaction.
+            let ext = (e.rot * Vec3::X).abs() * he.x + (e.rot * Vec3::Y).abs() * he.y + (e.rot * Vec3::Z).abs() * he.z;
+            let grow = Vec2::new(ext.x, ext.z) + Vec2::splat(radius);
+            let center = Vec2::new(e.pos.x, e.pos.z);
+            mark(&mut solid, center - grow, center + grow, true);
         }
         let blocked = floor.iter().zip(&solid).map(|(f, s)| !f || *s).collect();
         NavGrid { origin: min, cell, w, h, blocked }

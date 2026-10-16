@@ -58,6 +58,8 @@ pub fn key_from_name(n: &str) -> Option<KeyCode> {
     Some(match n {
         "Space" => Space,
         "Enter" => Enter,
+        "Escape" => Escape,
+        "Backspace" => Backspace,
         "Tab" => Tab,
         "ShiftLeft" => ShiftLeft,
         "ShiftRight" => ShiftRight,
@@ -285,6 +287,7 @@ pub struct Input {
     pub bindings: Bindings,
     /// Game mode: the right mouse button is a skill and the gamepad uses the game layout.
     pub game: bool,
+    pub dented: bool,
 }
 
 /// A pad's raw state for one frame.
@@ -412,6 +415,7 @@ impl Input {
             mouse_taps: HashSet::new(),
             bindings: Bindings::default(),
             game: false,
+            dented: false,
         }
     }
 
@@ -508,11 +512,28 @@ impl Input {
         let map = taps.contains(&Button::DPadLeft);
         let mut pad = Pad { start_pressed: start, map_pressed: map, taps, any_activity: activity, ..Default::default() };
         if let Some(st) = state {
-            let is = |b: Button| st.held.contains(&b);
+            let is = |b: Button| st.held.contains(&b) || (self.dented && pad.taps.contains(&b));
             pad.left = deadzone(st.left, 0.18);
             pad.right = deadzone(st.right, 0.25);
             let mut held = 0;
-            let layout: &[(Button, u32)] = if self.game {
+            let layout: &[(Button, u32)] = if self.dented {
+                &[
+                    (Button::RightTrigger, buttons::PRIMARY),
+                    (Button::LeftTrigger, buttons::FOCUS),
+                    (Button::East, buttons::DODGE | buttons::BACK),
+                    (Button::West, buttons::POTION),
+                    (Button::North, buttons::KIT),
+                    (Button::South, buttons::ACCEPT | buttons::INTERACT),
+                    (Button::RightThumb, buttons::SKILL3),
+                    (Button::LeftThumb, buttons::JUMP),
+                    (Button::DPadUp, buttons::UP),
+                    (Button::DPadDown, buttons::DOWN),
+                    (Button::DPadLeft, buttons::PREV),
+                    (Button::DPadRight, buttons::NEXT),
+                    (Button::Start, buttons::MENU),
+                    (Button::Select, buttons::JOURNAL),
+                ]
+            } else if self.game {
                 &[
                     (Button::West, buttons::PRIMARY),
                     (Button::North, buttons::SECONDARY),
@@ -538,15 +559,34 @@ impl Input {
                 }
             }
             if st.rt2 {
-                held |= if self.game { buttons::SKILL6 } else { buttons::USE };
+                held |= if self.dented {
+                    buttons::SECONDARY
+                } else if self.game {
+                    buttons::SKILL6
+                } else {
+                    buttons::USE
+                };
             }
             if st.lt2 {
-                held |= buttons::FOCUS;
+                held |= if self.dented { buttons::SKILL4 } else { buttons::FOCUS };
+            }
+            if self.dented {
+                if pad.left.y > 0.55 {
+                    held |= buttons::UP;
+                }
+                if pad.left.y < -0.55 {
+                    held |= buttons::DOWN;
+                }
             }
             pad.held = held;
-            pad.rotate = if self.game { 0.0 } else { (is(Button::RightTrigger) as i32 - is(Button::LeftTrigger) as i32) as f32 };
+            pad.rotate = if self.game || self.dented {
+                0.0
+            } else {
+                (is(Button::RightTrigger) as i32 - is(Button::LeftTrigger) as i32) as f32
+            };
             // In the game the D-pad is potion / use / map / panels, not zoom.
-            pad.zoom = if self.game { 0.0 } else { (is(Button::DPadDown) as i32 - is(Button::DPadUp) as i32) as f32 };
+            pad.zoom =
+                if self.game || self.dented { 0.0 } else { (is(Button::DPadDown) as i32 - is(Button::DPadUp) as i32) as f32 };
             pad.a_held = is(Button::South);
             pad.x_held = is(Button::West);
             pad.y_held = is(Button::North);
@@ -581,7 +621,7 @@ impl Input {
         if self.mouse.contains(&MouseButton::Left) {
             b |= buttons::PRIMARY;
         }
-        if self.game && self.mouse.contains(&MouseButton::Right) {
+        if (self.game || self.dented) && self.mouse.contains(&MouseButton::Right) {
             b |= buttons::SECONDARY;
         }
         b
@@ -599,7 +639,7 @@ impl Input {
         if self.mouse_taps.contains(&MouseButton::Left) {
             pressed |= buttons::PRIMARY;
         }
-        if self.game && self.mouse_taps.contains(&MouseButton::Right) {
+        if (self.game || self.dented) && self.mouse_taps.contains(&MouseButton::Right) {
             pressed |= buttons::SECONDARY;
         }
         self.key_taps.clear();
@@ -622,6 +662,15 @@ impl Input {
 #[cfg(test)]
 mod pad_script_tests {
     use super::*;
+
+    #[test]
+    fn dented_room_bindings_resolve_escape_and_return() {
+        let room = pav_core::room::RoomDef::parse(include_str!("../../pav_core/src/games/dented.toml")).unwrap();
+        let (bindings, errors) = Bindings::with_overrides(&room.keys);
+        assert!(errors.is_empty(), "{errors:?}");
+        assert!(bindings.buttons.iter().any(|(bit, keys)| *bit == buttons::MENU && keys.contains(&KeyCode::Escape)));
+        assert!(bindings.buttons.iter().any(|(bit, keys)| *bit == buttons::BACK && keys.contains(&KeyCode::Backspace)));
+    }
 
     #[test]
     fn pad_scripts_parse_and_play() {

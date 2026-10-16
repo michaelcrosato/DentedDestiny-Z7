@@ -984,6 +984,12 @@ impl Sim {
             boss: self.boss_bar(),
             pad_note: c.pad_note.clone(),
             lines: self.play_hud(),
+            dented: self
+                .state
+                .play
+                .as_ref()
+                .and_then(|p| p.get::<crate::games::dented::Dented>())
+                .map(|g| std::sync::Arc::new(g.clone())),
         };
         RenderFrame {
             tick: self.state.tick,

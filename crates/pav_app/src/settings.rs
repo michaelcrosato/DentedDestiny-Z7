@@ -85,7 +85,7 @@ impl Settings {
         }
         if s.scene.is_empty() {
             // Shardfall's town; the engine's pavilion is the `world` scene (pause menu).
-            s.scene = "town".into();
+            s.scene = "dented".into();
         }
         (s, "page address (?room=NAME&seed=N)".into())
     }
@@ -93,7 +93,7 @@ impl Settings {
     /// Loads settings (creating the file with defaults on first run), then applies CLI flags.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load(args: &[String]) -> (Self, String) {
-        let path = crate::boot::exe_dir().join("shardfall.toml");
+        let path = crate::boot::exe_dir().join("dented-destiny.toml");
         let mut note = String::new();
         let mut s = match std::fs::read_to_string(&path) {
             Ok(text) => match toml_from_str(&text) {
@@ -171,7 +171,7 @@ impl Settings {
         }
         if s.scene.is_empty() {
             // Shardfall's town; the engine's pavilion is the `world` scene (pause menu).
-            s.scene = "town".into();
+            s.scene = "dented".into();
         }
         (s, note)
     }

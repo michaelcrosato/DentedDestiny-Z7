@@ -28,3 +28,8 @@
 .claude/worktrees/
 /assets/props/workshop/
 /assets/materials/workshop/
+
+# Dented Destiny local saves and captures (never publish personal progress).
+dented-destiny-save.json
+dented-destiny-save.tmp
+dented-destiny.toml

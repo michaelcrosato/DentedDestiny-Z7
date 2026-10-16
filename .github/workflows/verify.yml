@@ -1,0 +1,23 @@
+name: Verify pilgrimage
+on:
+  push:
+    paths-ignore: ["docs/**", "README.md"]
+  pull_request:
+    paths-ignore: ["docs/**", "README.md"]
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Deterministic gameplay and game registration
+        run: cargo test --locked -p pav_core --test dented --test games
+      - name: Engine navigation
+        run: cargo test --locked -p pav_core nav::
+      - name: Browser compile
+        run: cargo check --locked -p pav_app --target wasm32-unknown-unknown

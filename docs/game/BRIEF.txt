@@ -1,0 +1,48 @@
+SOURCE: [Elden Ring 2022]
+
+Game Name: [Base the game name on a playful version of the SOURCE name and Generate 50 possible game titles. Pick one at random and append a 2-character alphanumeric ID in the format [GameTitle-XX] to ensure unique naming in our repository.]
+Game Engine: https://github.com/michaelcrosato/shardfall
+Enviroment: Create a git, setup up the repo files, make a github.com/michaelcrosato/[GameTitle-XX] public, install whatever tools, programs you need to properly develop this game.
+Testing: Because this PC has several agents running on different projects, prioritize the following type of testing, Logic tests, no browser, no server, 2) Headless browser, no server, 3) Headless browser + local server on uncommon port (to avoid conflicts with other agents projects), 4) Headed browser + local server 
+
+## Goal
+
+Build an original spiritual successor to SOURCE. 
+
+Create a feature-complete, gameplay-complete vertical slice consisting of one fully polished level inspired by SOURCE. Capture what makes the SOURCE distinctive while modernizing and improving its mechanics, pacing, and UX wherever it benefits the game.
+
+While the content scope is a single level, the underlying architecture must serve as the foundational game engine for the full game—a comprehensive technical demo hidden in plain sight. Design this level as a systemic proving ground that exercises as many core engine systems, state loops, and extensible mechanics as reasonably possible, so handing off the game demo to another agent will allow for an easier time expanding into the full game is a matter of adding content rather than adding or rewriting architecture. Additional passes, levels or a specific developer demo level maybe required to complete the engine.
+
+Attract Mode / Store Demo Mode: Implement a fully autonomous attract loop. After 10 seconds of no input on the title/menu screen, the game should automatically enter a continuous demo where AI plays the game, showcasing core mechanics. The loop should run indefinitely until any player input is detected, at which point it immediately returns to the title screen. This should function like a classic arcade attract mode or retail kiosk demo.
+
+## UI & UX: 10-Foot Controller-First Philosophy
+
+Design all interfaces and interactions for a "10-foot experience" with a PS5-compatible controller as the primary input. Keyboard and mouse are secondary inputs that map to the controller's interaction model, not a separate desktop paradigm.
+
+Apply modern UX principles—prioritize spatial clarity, effortless legibility from across a room, and tactile gamepad navigation (focus snapping, bumper/trigger cycling, radial or contextual menus). Use your judgment to balance deep systemic information with clean, uncluttered presentation.
+
+Do not use over dense, web-style data screens.
+
+Do not spend anytime of mobile controls or UI. For mobile UI nothing on screen except maybe the setting/menu button. The mobile version basically runs in Attact Mode / Store Demo Mode.
+
+## Technology
+
+Use the GAME ENGINE as the foundation, use what it provides to the best our your ability but modify, expand and add to the game engine to suit your needs. The rest of the tech stack is yours to make.
+
+## Visuals and Animation
+
+Take inspiration from SOURCE and respect its look, feel, and atmosphere. Provide a FPS / frame timer on screen. Do not allow the average FPS to fall below 25. For target hardware of RTX 3060 Ti.
+
+## Done
+
+You are goal is considered complete when all game features, systems and infrastructure has been completed. The vertical slice content properly demonstrates the games updated design and capabilities and they have been polished.
+
+## Source Information
+
+Include the following information for reference in this chat, the source readme and html file (if one is created for it) separate from the engine evaluation:
+
+- **Initial Date:** The date of the first prompt, if known.
+- **SOURCE:** The source game or games, if applicable.
+- **GAME ENGINE:** The engine used, including its version if known, handoff URL or file given.
+- **Environment:** What you know about your working environment, including CLI, application, or cloud; operating system (Windows, macOS, or Linux); and browser, if applicable.
+- **Model and Effort Level:** State your AI lab, model and reasoning effort level, if you can confirm them. Do not guess or present uncertain information as fact.

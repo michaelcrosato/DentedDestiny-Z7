@@ -5,6 +5,7 @@ pub mod assets;
 pub mod build;
 pub mod camera;
 pub mod creatures;
+pub mod dented;
 pub mod fx;
 pub mod look;
 pub mod materials;

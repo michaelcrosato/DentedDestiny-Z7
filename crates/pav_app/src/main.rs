@@ -14,6 +14,8 @@ mod boot;
 mod bridge;
 mod creature_ui;
 mod creature_watch;
+mod dented_save;
+mod dented_ui;
 mod edit;
 mod gfx;
 mod guide_ui;
