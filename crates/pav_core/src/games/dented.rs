@@ -278,6 +278,7 @@ pub struct Dented {
     pub stamina: f32,
     pub flasks: u32,
     pub player_pos: Vec3,
+    pub safe_pos: Vec3,
     pub facing: f32,
     pub action: Action,
     pub action_time: f32,
@@ -338,6 +339,7 @@ pub fn build(sim: &mut Sim, rest: Option<&str>) -> Result<()> {
         stamina: 100.,
         flasks: 3,
         player_pos: start,
+        safe_pos: start,
         facing: std::f32::consts::PI,
         action: Action::Idle,
         action_time: 0.,
@@ -507,6 +509,7 @@ impl Dented {
         self.sync_doors(sim);
         self.progress.checkpoint = self.progress.checkpoint.min(self.rules.shrines.len() - 1);
         self.player_pos = self.rules.shrines[self.progress.checkpoint];
+        self.safe_pos = self.player_pos;
         if let Some(id) = sim.state.player {
             sim.set_position(id, self.player_pos);
         }
@@ -825,7 +828,12 @@ impl Dented {
         event_hit(events, self.player_pos, damage);
         if self.hp <= 0. {
             self.progress.deaths += 1;
-            self.blood = Some((self.player_pos, self.progress.echoes));
+            let drop = if self.player_pos.y < -0.5 || self.nav.as_ref().is_none_or(|nav| !nav.walkable(self.player_pos)) {
+                self.safe_pos
+            } else {
+                self.player_pos
+            };
+            self.blood = Some((drop, self.progress.echoes));
             self.progress.blood = self.blood;
             self.progress.echoes = 0;
             self.set_mode(Mode::Dead);
@@ -1315,8 +1323,16 @@ impl Game for Dented {
                 sim.set_position(id, self.player_pos);
             }
         }
+        if sim.player().and_then(|p| p.character.as_ref()).is_some_and(|ch| ch.grounded)
+            && self.player_pos.y >= -0.1
+            && self.nav.as_ref().is_some_and(|nav| nav.walkable(self.player_pos))
+        {
+            self.safe_pos = self.player_pos;
+        }
         if self.player_pos.y < -3. {
-            self.damage_player(999., self.player_pos, events);
+            self.invuln = 0.0;
+            self.guard = false;
+            self.damage_player(self.progress.max_hp() * 4.0, self.player_pos, events);
         }
         for e in &mut self.enemies {
             if e.hp > 0. {

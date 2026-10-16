@@ -308,3 +308,23 @@ fn practice_scene_never_requests_a_campaign_save() {
     assert_eq!(game(&s).progress.vigor, 1);
     assert_eq!(game(&s).save_serial, 0);
 }
+
+#[test]
+fn falling_drops_echoes_on_reachable_ground_even_during_invulnerability() {
+    let mut s = Sim::new("dented/play", 2).unwrap();
+    for _ in 0..20 {
+        s.step(&InputFrame::default());
+    }
+    let safe = game(&s).safe_pos;
+    let nav = pav_core::nav::NavGrid::for_room(&s).unwrap();
+    game_mut(&mut s).options.assist = true;
+    game_mut(&mut s).progress.echoes = 91;
+    game_mut(&mut s).invuln = 3.0;
+    s.set_position(s.state.player.unwrap(), glam::Vec3::new(26., -5., 24.));
+    s.step(&InputFrame::default());
+    assert_eq!(game(&s).mode, Mode::Dead);
+    let (drop, echoes) = game(&s).blood.unwrap();
+    assert_eq!(echoes, 91);
+    assert_eq!(drop, safe);
+    assert!(nav.walkable(drop));
+}
