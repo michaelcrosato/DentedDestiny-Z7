@@ -18,6 +18,6 @@ jobs:
       - name: Deterministic gameplay and game registration
         run: cargo test --locked -p pav_core --test dented --test games
       - name: Engine navigation
-        run: cargo test --locked -p pav_core nav::
+        run: "cargo test --locked -p pav_core --lib nav::"
       - name: Browser compile
         run: cargo check --locked -p pav_app --target wasm32-unknown-unknown
