@@ -415,7 +415,7 @@ impl Dented {
         self.notice_time = 4.;
     }
     fn save(&mut self) {
-        if !self.demo {
+        if !self.demo && !self.lab {
             self.save_serial += 1;
         }
     }

@@ -29,12 +29,14 @@ pub fn restore(sim: &mut Sim) {
     };
     if let Some(g) = play.get_mut::<Dented>() {
         g.options = save.options;
-        g.restore_progress(progress, sim);
+        if !g.lab {
+            g.restore_progress(progress, sim);
+        }
     }
     sim.state.play = Some(play);
 }
 pub fn save(g: &Dented) {
-    if g.demo {
+    if g.demo || g.lab {
         return;
     }
     let Ok(text) = serde_json::to_string(&Save { progress: g.progress.clone(), options: g.options.clone() }) else {

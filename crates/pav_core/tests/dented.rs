@@ -296,3 +296,15 @@ fn pause_holds_airborne_position_and_restart_discards_buffered_actions() {
     assert_eq!(game(&s).action, Action::Idle);
     assert_eq!(game(&s).buffer, 0);
 }
+
+#[test]
+fn practice_scene_never_requests_a_campaign_save() {
+    let mut s = Sim::new("dented/lab", 3).unwrap();
+    assert!(game(&s).lab && game(&s).progress.relic && game(&s).progress.gate);
+    assert_eq!(game(&s).save_serial, 0);
+    tap(&mut s, b::INTERACT);
+    tap(&mut s, b::DOWN);
+    tap(&mut s, b::ACCEPT);
+    assert_eq!(game(&s).progress.vigor, 1);
+    assert_eq!(game(&s).save_serial, 0);
+}
