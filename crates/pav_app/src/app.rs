@@ -1185,6 +1185,20 @@ impl App {
                 if let Some(e) = g.locked.and_then(|i| g.enemies.get(i)) {
                     focus = focus.lerp(e.pos + Vec3::Y, 0.22);
                 }
+                // Lock-on (and the unattended boss demonstration) keeps the camera behind
+                // the pilgrim, so circling a large opponent cannot hide the player in it.
+                let camera_enemy = g
+                    .locked
+                    .and_then(|i| g.enemies.get(i))
+                    .or_else(|| if g.demo && g.boss_active { g.enemies.iter().find(|e| e.boss() && e.hp > 0.0) } else { None });
+                if let Some(enemy) = camera_enemy {
+                    let direction = enemy.pos - g.player_pos;
+                    if direction.x * direction.x + direction.z * direction.z > 0.25 {
+                        let desired = direction.x.atan2(-direction.z).to_degrees();
+                        let delta = (desired - self.rig.params.yaw + 180.0).rem_euclid(360.0) - 180.0;
+                        self.rig.params.yaw += delta * (dt * 4.0).min(1.0);
+                    }
+                }
                 if g.boss_active {
                     self.rig.params.distance = if g.options.camera == 1 { 22.0 } else { 17.0 };
                     self.rig.params.tilt = self.rig.params.tilt.max(37.0);
