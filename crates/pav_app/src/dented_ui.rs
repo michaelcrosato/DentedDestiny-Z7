@@ -79,7 +79,16 @@ fn veil(p: &egui::Painter, r: Rect, left: u8, right: u8) {
     p.add(egui::Shape::mesh(m));
 }
 
-pub fn draw(ui: &mut egui::Ui, g: &Dented, fps: f32, ms: f32, device: Device, mobile: bool, vp: glam::Mat4) -> Option<usize> {
+pub fn draw(
+    ui: &mut egui::Ui,
+    g: &Dented,
+    fps: f32,
+    ms: f32,
+    device: Device,
+    mobile: bool,
+    vp: glam::Mat4,
+    camera_yaw: f32,
+) -> Option<usize> {
     let ctx = ui.ctx().clone();
     let screen = ctx.content_rect();
     let k = (screen.width() / 1600.).min(screen.height() / 900.);
@@ -109,10 +118,15 @@ pub fn draw(ui: &mut egui::Ui, g: &Dented, fps: f32, ms: f32, device: Device, mo
         ink.bar(111., 53., 310., 14., g.hp / g.progress.max_hp(), Color32::from_rgb(158, 67, 59));
         ink.bar(111., 78., 270., 8., g.stamina / g.progress.max_stamina(), Color32::from_rgb(117, 151, 109));
         ink.text(111., 99., &format!("PILGRIM  /  VITALITY {}", g.progress.vigor + 1), 15., MUTED, false);
-        ink.centered(800., 34., "W            N            E", 16., MUTED, false);
+        for (label, bearing) in [("N", 0.0_f32), ("E", 90.0), ("S", 180.0), ("W", 270.0)] {
+            let offset = (bearing - camera_yaw + 180.0).rem_euclid(360.0) - 180.0;
+            if offset.abs() <= 65.0 {
+                ink.centered(800.0 + offset * 2.0, 34.0, label, 16.0, MUTED, false);
+            }
+        }
         ink.line(670., 62., 260., Color32::from_white_alpha(35));
         ink.diamond(800., 62., 4., GOLD);
-        ink.text(1285., 67., &format!("✧  {:05} ECHOES", g.progress.echoes), 21., GOLD, false);
+        ink.text(1285., 67., &format!("{:05} ECHOES", g.progress.echoes), 21., GOLD, false);
         if g.area_time > 0. {
             let alpha = (g.area_time.min(1.) * 255.) as u8;
             ink.centered(800., 164., &g.area, 30., IVORY.gamma_multiply(alpha as f32 / 255.), true);

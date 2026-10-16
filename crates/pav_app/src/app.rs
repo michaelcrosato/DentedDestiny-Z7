@@ -1179,6 +1179,8 @@ impl App {
                 }
                 if g.options.camera == 1 {
                     self.rig.params.tilt = 57.0;
+                } else if prev.hud.dented.as_ref().is_some_and(|old| old.options.camera != g.options.camera) {
+                    self.rig.params.tilt = 32.0;
                 }
                 if let Some(e) = g.locked.and_then(|i| g.enemies.get(i)) {
                     focus = focus.lerp(e.pos + Vec3::Y, 0.22);
@@ -1287,7 +1289,15 @@ impl App {
             self.last_save = Instant::now();
             host.exec(|sim| crate::save::save_from(sim));
         }
-        if let Some(a) = &self.audio {
+        // Suspended browser audio must not accumulate an unbounded kiosk event queue.
+        #[cfg(target_arch = "wasm32")]
+        let audio_ready = self.audio_resumed;
+        #[cfg(not(target_arch = "wasm32"))]
+        let audio_ready = true;
+        if let Some(a) = self.audio.as_ref().filter(|_| audio_ready) {
+            if let Some(g) = &curr.hud.dented {
+                a.set_master(if g.options.sound { self.audio_settings.master } else { 0.0 });
+            }
             let (_, right) = self.rig.ground_axes();
             let l = pav_audio::Listener { pos: self.rig.target, right };
             for e in &events {
@@ -1443,6 +1453,7 @@ impl App {
         let panel = &mut self.panel;
         let master_before = self.audio_settings.master;
         let view_proj = self.rig.view_proj(w as f32 / h.max(1) as f32);
+        let dented_camera_yaw = self.rig.current().yaw;
         let mut root = Root {
             sim: &mut self.sim_config,
             camera: &mut self.rig.params,
@@ -1487,7 +1498,8 @@ impl App {
                 ui::crash_banner(ui, c);
             }
             if let Some(g) = &curr.hud.dented {
-                dented_choice = crate::dented_ui::draw(ui, g, info.fps, info.frame_ms, device, dented_mobile, view_proj);
+                dented_choice =
+                    crate::dented_ui::draw(ui, g, info.fps, info.frame_ms, device, dented_mobile, view_proj, dented_camera_yaw);
                 return;
             }
             panel_actions = panel.ui(ui, &mut root, &mut ctl, &stats);
@@ -2189,9 +2201,9 @@ impl App {
     #[cfg(target_arch = "wasm32")]
     fn resume_audio(&mut self) {
         if !self.audio_resumed {
-            self.audio_resumed = true;
             if let Some(a) = &self.audio {
                 a.resume();
+                self.audio_resumed = true;
             }
         }
     }

@@ -243,3 +243,56 @@ fn attract_repeats_actual_runs_without_changing_the_saved_pilgrimage() {
     assert_eq!(game(&s).time, 57.0);
     assert_eq!(game(&s).metrics.lights, 9);
 }
+
+#[test]
+fn bot_does_not_oscillate_between_a_gate_and_an_unseen_enemy() {
+    use glam::Vec3;
+    let mut s = Sim::new("dented/play", 1).unwrap();
+    let at = Vec3::new(3.07, 0.02, 6.98);
+    s.set_position(s.state.player.unwrap(), at);
+    let g = game_mut(&mut s);
+    g.player_pos = at;
+    g.progress.chime = true;
+    g.progress.relic = true;
+    for e in g.enemies.iter_mut().take(5) {
+        e.hp = 0.0;
+    }
+    // This position straddles the northern lancer's previous 10 m perception threshold.
+    // It must reach the gate rather than switch between two opposing steering directions.
+    for _ in 0..1800 {
+        let f = s.bot_input();
+        s.step(&f);
+        if game(&s).progress.gate {
+            break;
+        }
+    }
+    assert!(game(&s).progress.gate, "{}", game(&s).status(&s));
+    let mut bytes = Vec::new();
+    ciborium::into_writer(&s.snapshot(), &mut bytes).unwrap();
+    let mut copy = Sim::new("dented/play", 1).unwrap();
+    copy.restore(ciborium::from_reader(bytes.as_slice()).unwrap());
+    assert_eq!(s.bot_input(), copy.bot_input(), "bot decisions must not depend on a warm nav cache");
+}
+
+#[test]
+fn pause_holds_airborne_position_and_restart_discards_buffered_actions() {
+    let mut s = Sim::new("dented/play", 7).unwrap();
+    tap(&mut s, b::JUMP);
+    for _ in 0..8 {
+        s.step(&InputFrame::default());
+    }
+    tap(&mut s, b::MENU);
+    let paused = s.feet(s.state.player.unwrap()).unwrap();
+    for _ in 0..120 {
+        s.step(&InputFrame::default());
+    }
+    assert!(s.feet(s.state.player.unwrap()).unwrap().distance(paused) < 0.001);
+    let g = game_mut(&mut s);
+    g.buffer = b::PRIMARY;
+    g.buffer_time = 0.2;
+    g.set_mode(Mode::Dead);
+    tap(&mut s, b::ACCEPT);
+    s.step(&InputFrame::default());
+    assert_eq!(game(&s).action, Action::Idle);
+    assert_eq!(game(&s).buffer, 0);
+}

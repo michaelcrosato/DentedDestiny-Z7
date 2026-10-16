@@ -496,6 +496,11 @@ impl Dented {
         self.flasks = 3;
         self.action = Action::Idle;
         self.action_time = 0.;
+        self.buffer = 0;
+        self.buffer_time = 0.;
+        self.regen_delay = 0.;
+        self.flash = 0.;
+        self.notice_time = 0.;
         self.invuln = 1.;
         self.guard = false;
         self.reset_encounters(sim);
@@ -1289,6 +1294,17 @@ impl Game for Dented {
     }
     fn post(&mut self, sim: &mut Sim, dt: f32, events: &mut Vec<SimEvent>) {
         if self.mode != Mode::Playing {
+            // Menus still tick to accept input and count attract inactivity. Pin the actors
+            // after physics so jumping/falling characters cannot drift while the game waits.
+            let lift = Vec3::Y * crate::character::PLACE_LIFT;
+            if let Some(id) = sim.state.player {
+                sim.set_position(id, self.player_pos - lift);
+            }
+            for enemy in &self.enemies {
+                if enemy.hp > 0. {
+                    sim.set_position(enemy.id, enemy.pos - lift);
+                }
+            }
             return;
         }
         self.player_pos = sim.state.player.and_then(|id| sim.feet(id)).unwrap_or(self.player_pos);
@@ -1365,7 +1381,7 @@ impl Game for Dented {
             Outcome::Playing
         }
     }
-    fn bot(&self, _: &Sim) -> InputFrame {
+    fn bot(&self, sim: &Sim) -> InputFrame {
         let mut f = InputFrame::default();
         if self.mode == Mode::Title {
             f.pressed = b::ACCEPT;
@@ -1387,11 +1403,26 @@ impl Game for Dented {
         if self.mode != Mode::Playing {
             return f;
         }
+        // The cache is not serialized. Rebuild it before deciding, so a loaded snapshot's
+        // bot gives exactly the same input as the original state.
+        if self.nav.is_none() {
+            let mut ready = self.clone();
+            ready.nav = NavGrid::for_room(sim).map(Arc::new);
+            if ready.nav.is_some() {
+                return ready.bot(sim);
+            }
+        }
         let p = self.player_pos;
         let nearest = self
             .enemies
             .iter()
-            .filter(|e| e.hp > 0. && (!e.boss() || self.boss_active) && flat(e.pos - p) < 10.)
+            .filter(|e| {
+                e.hp > 0.
+                    && (!e.boss() || self.boss_active)
+                    && flat(e.pos - p) < 10.
+                    && (self.line_clear(p, e.pos)
+                        || matches!(e.intent, Intent::Chase | Intent::Windup | Intent::Recover | Intent::Stagger))
+            })
             .min_by(|a, z| flat(a.pos - p).total_cmp(&flat(z.pos - p)));
         if let Some(e) = nearest {
             let v = e.pos - p;
