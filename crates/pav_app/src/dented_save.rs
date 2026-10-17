@@ -66,8 +66,9 @@ pub fn save(g: &Dented) {
 pub fn publish_diagnostics(g: &Dented, fps: f32, frame_ms: f32, adapter: &str) {
     use wasm_bindgen::JsValue;
     let value = serde_json::json!({"mode":g.mode,"demo":g.demo,"menu":g.menu,"hp":g.hp,
-        "stamina":g.stamina,"player":g.player_pos,"time":g.time,"idle":g.idle,"action":g.action,"flasks":g.flasks,"boss_active":g.boss_active,"options":g.options,"area":g.area,
-        "progress":g.progress,"metrics":g.metrics,"fps":fps,"frame_ms":frame_ms,"adapter":adapter});
+        "stamina":g.stamina,"player":g.player_pos,"time":g.time,"idle":g.idle,"flasks":g.flasks,"boss_active":g.boss_active,"options":g.options,"area":g.area,
+        "action":g.action,"action_time":g.action_time,"action_total":g.action_total,"combo":g.combo,"hitstop":g.hitstop,
+        "impacts":g.impacts,"progress":g.progress,"metrics":g.metrics,"fps":fps,"frame_ms":frame_ms,"adapter":adapter});
     if let (Some(window), Ok(js)) = (web_sys::window(), js_sys::JSON::parse(&value.to_string())) {
         let _ = js_sys::Reflect::set(&window, &JsValue::from_str("__DENTED_DIAGNOSTICS__"), &js);
     }

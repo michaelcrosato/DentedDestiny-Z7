@@ -316,6 +316,8 @@ fn fnv(text: &str) -> u64 {
 /// FNV-1a of each core material's golden samples (8-bit sRGB per sample, as the GPU writes
 /// them). A change here changes what the renderer must match: re-bless only on purpose.
 const GOLDEN: &[(&str, u64)] = &[
+    ("MAT/abbey_cloth", 0x7b59a909910dd7b7),
+    ("MAT/abbey_flagstones", 0x3d52042da5d5e03d),
     ("MAT/awning_stripes", 0x0438a3d4446e2dca),
     ("MAT/barrel_staves", 0xbe3057b135eda4b4),
     ("MAT/brick_wall", 0x2ff7d39f887982f9),

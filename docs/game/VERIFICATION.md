@@ -1,5 +1,8 @@
 # Verification — Dented Destiny Z7
 
+The v0.2.0 combat/animation update is verified in [COMBAT-REVISION.md](COMBAT-REVISION.md), with [machine-readable evidence](evidence/combat-revision.json). The record below describes the original v0.1.0 delivery.
+
+
 Validation uses actual simulation, rendered output and repository state. The source requirement list is preserved in PLAN.md and the original brief in BRIEF.txt.
 
 ## Verified implementation

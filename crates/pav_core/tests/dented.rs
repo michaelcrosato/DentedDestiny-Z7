@@ -202,8 +202,11 @@ fn heavy_damage_occurs_once_and_heal_has_commitment() {
     game_mut(&mut s).enemies[0].timer = 99.;
     game_mut(&mut s).enemies[0].hp = 1000.;
     tap(&mut s, b::SECONDARY);
-    for _ in 0..58 {
+    for _ in 0..90 {
         s.step(&InputFrame::default());
+        if game(&s).action == Action::Idle {
+            break;
+        }
     }
     assert!((game(&s).enemies[0].hp - 952.).abs() < 0.01);
     game_mut(&mut s).hp = 20.;
@@ -350,4 +353,63 @@ fn pointer_menu_commands_replay_and_stale_contexts_are_rejected() {
         replay.step(input);
     }
     assert_eq!(s.state_hash(), replay.state_hash());
+}
+
+#[test]
+fn contact_holds_actors_and_preserves_the_next_combo_input() {
+    use pav_core::games::dented::Intent;
+    let mut s = duel();
+    let e = &mut game_mut(&mut s).enemies[0];
+    e.intent = Intent::Idle;
+    e.sight = 0.;
+    e.hp = 1000.;
+    tap(&mut s, b::PRIMARY);
+    assert_eq!(game(&s).combo, 0);
+    for _ in 0..40 {
+        if game(&s).hitstop > 0. {
+            break;
+        }
+        s.step(&InputFrame::default());
+    }
+    assert!(game(&s).hitstop > 0.);
+    assert!(game(&s).enemies[0].motion.reaction > 0.);
+    assert!(!game(&s).impacts.is_empty());
+    let at = game(&s).player_pos;
+    let enemy_at = game(&s).enemies[0].pos;
+    let time = game(&s).action_time;
+    let hp = game(&s).enemies[0].hp;
+    tap(&mut s, b::PRIMARY);
+    assert!(game(&s).frozen);
+    assert_eq!(game(&s).action_time, time);
+    assert_eq!(game(&s).player_pos, at);
+    assert_eq!(game(&s).enemies[0].pos, enemy_at);
+    assert_eq!(game(&s).enemies[0].hp, hp);
+    for _ in 0..40 {
+        if game(&s).metrics.lights == 2 {
+            break;
+        }
+        s.step(&InputFrame::default());
+    }
+    assert_eq!(game(&s).metrics.lights, 2, "tap during contact should chain in recovery");
+    assert_eq!(game(&s).combo, 1);
+    assert!(game(&s).action_time > 0.);
+}
+
+#[test]
+fn dodge_cannot_erase_windup_but_can_cancel_attack_recovery() {
+    use pav_core::games::dented_motion;
+    let mut s = Sim::new("dented/play", 1).unwrap();
+    tap(&mut s, b::SECONDARY);
+    tap(&mut s, b::DODGE);
+    assert_eq!(game(&s).action, Action::Heavy);
+    let contact = dented_motion::attack(Action::Heavy, 0, false).contact;
+    for _ in 0..50 {
+        if game(&s).action_total - game(&s).action_time > contact + 0.08 {
+            break;
+        }
+        s.step(&InputFrame::default());
+    }
+    tap(&mut s, b::DODGE);
+    assert_eq!(game(&s).action, Action::Dodge);
+    assert_eq!(game(&s).metrics.dodges, 1);
 }
