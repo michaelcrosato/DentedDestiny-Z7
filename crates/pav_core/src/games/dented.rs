@@ -1,6 +1,9 @@
 //! Dented Destiny. Rules are deterministic and independent of window, renderer and audio.
 //! Add encounters and tune combat in dented.toml; all changing state is snapshot-safe.
-use super::{Game, GameBox, Outcome};
+use super::{
+    Game, GameBox, Outcome,
+    dented_motion::{self as motion, Impact, ImpactKind, Motion},
+};
 use crate::{
     InputFrame, Sim,
     color::Color,
@@ -47,6 +50,8 @@ pub enum Action {
     Heal,
     Parry,
     Stagger,
+    Interact,
+    Equip,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Kind {
@@ -206,6 +211,10 @@ pub struct Enemy {
     pub phase: u8,
     pub poise: f32,
     pub flash: f32,
+    #[serde(default)]
+    pub motion: Motion,
+    #[serde(default)]
+    pub death_time: f32,
 }
 impl Enemy {
     pub fn name(&self) -> &'static str {
@@ -308,6 +317,14 @@ pub struct Dented {
     pub save_serial: u64,
     pub buffer: u32,
     pub buffer_time: f32,
+    #[serde(default)]
+    pub motion: Motion,
+    #[serde(default)]
+    pub hitstop: f32,
+    #[serde(default)]
+    pub frozen: bool,
+    #[serde(default)]
+    pub impacts: Vec<Impact>,
     #[serde(skip)]
     nav: Option<Arc<NavGrid>>,
 }
@@ -370,6 +387,10 @@ pub fn build(sim: &mut Sim, rest: Option<&str>) -> Result<()> {
         save_serial: 0,
         buffer: 0,
         buffer_time: 0.,
+        motion: Motion::default(),
+        hitstop: 0.,
+        frozen: false,
+        impacts: Vec::new(),
         nav: None,
     };
     for z in [-23., -15., -6., 4., 14., 24.] {
@@ -477,6 +498,8 @@ impl Dented {
                 phase: 1,
                 poise: 0.,
                 flash: 0.,
+                motion: Motion::default(),
+                death_time: 0.,
             });
         }
     }
@@ -501,6 +524,10 @@ impl Dented {
         self.flasks = 3;
         self.action = Action::Idle;
         self.action_time = 0.;
+        self.motion = Motion::default();
+        self.hitstop = 0.;
+        self.frozen = false;
+        self.impacts.clear();
         self.buffer = 0;
         self.buffer_time = 0.;
         self.regen_delay = 0.;
@@ -803,6 +830,7 @@ impl Dented {
         self.action_time = duration;
         self.action_total = duration;
         self.hit_done = false;
+        self.motion.swing_sound = false;
         self.stamina = (self.stamina - cost).max(0.);
         self.regen_delay = 0.55;
     }
@@ -814,6 +842,7 @@ impl Dented {
         if self.action == Action::Parry && self.action_total - self.action_time < 0.26 && facing {
             return;
         }
+        let blocked = self.guard && facing && self.stamina > 0.;
         let mut damage = damage;
         if self.options.assist {
             damage *= 0.55;
@@ -829,6 +858,12 @@ impl Dented {
                 self.announce("GUARD BROKEN");
             }
         }
+        self.motion.reaction = if blocked { 0.20 } else { 0.32 };
+        self.motion.reaction_dir = (self.player_pos - from).normalize_or_zero();
+        if !blocked && !matches!(self.action, Action::Heavy | Action::Dodge) {
+            self.set_action(Action::Stagger, 0.32, 0.);
+        }
+        self.impact(self.player_pos + Vec3::Y, self.player_pos - from, if blocked { ImpactKind::Block } else { ImpactKind::Hit });
         self.hp = (self.hp - damage).max(0.);
         self.invuln = 0.55;
         self.flash = 0.35;
@@ -851,6 +886,7 @@ impl Dented {
         let e = &mut self.enemies[i];
         e.hp = 0.;
         e.intent = Intent::Dead;
+        e.death_time = 0.;
         sim.set_position(e.id, e.home - Vec3::Y * 40.);
         self.progress.echoes += e.reward;
         self.progress.kills += 1;
@@ -870,9 +906,10 @@ impl Dented {
     fn strike(&mut self, sim: &mut Sim, events: &mut Vec<SimEvent>) {
         let heavy = self.action == Action::Heavy;
         let great = self.progress.weapon == 1;
-        let reach = if great { 3.5 } else { 2.9 };
+        let reach = if great { 2.85 } else { 2.45 };
         let base = if heavy { self.rules.heavy_damage } else { self.rules.light_damage };
-        let damage = base * (1. + self.progress.edge as f32 * 0.15) * if great { 1.3 } else { 1. };
+        let spec = motion::attack(self.action, self.combo, great);
+        let damage = base * spec.damage * (1. + self.progress.edge as f32 * 0.15) * if great { 1.3 } else { 1. };
         let mut hit = false;
         for i in 0..self.enemies.len() {
             let e = &self.enemies[i];
@@ -892,7 +929,9 @@ impl Dented {
             let e = &mut self.enemies[i];
             let dealt = damage * if critical { 1.7 } else { 1. };
             e.hp -= dealt;
-            e.flash = 0.22;
+            e.flash = 0.14;
+            e.motion.reaction = 0.32;
+            e.motion.reaction_dir = v.normalize_or_zero();
             e.poise += if heavy { 55. } else { 20. };
             hit = true;
             event_hit(events, e.pos, dealt);
@@ -902,12 +941,54 @@ impl Dented {
                 e.duration = 1.5;
                 e.poise = 0.;
             }
-            if e.hp <= 0. {
+            let broken = e.intent == Intent::Stagger;
+            // Small enemies flinch on every hit. Armoured bosses keep their attack until poise breaks.
+            if !e.boss() && !broken {
+                e.intent = Intent::Recover;
+                e.timer = if heavy { 0.58 } else { 0.30 };
+                e.duration = e.timer;
+            }
+            if let Some(ch) = sim.state.entities.get_mut(e.id).and_then(|e| e.character.as_mut()) {
+                ch.impulse += v.normalize_or_zero()
+                    * if e.kind == Kind::Guardian {
+                        0.5
+                    } else if heavy {
+                        3.6
+                    } else {
+                        1.8
+                    };
+            }
+            let impact_pos =
+                e.pos + Vec3::Y * if e.boss() { 1.8 } else { 1.1 } - v.normalize_or_zero() * if e.boss() { 0.65 } else { 0.35 };
+            self.impact(
+                impact_pos,
+                v,
+                if broken || critical {
+                    ImpactKind::Break
+                } else if heavy {
+                    ImpactKind::Heavy
+                } else {
+                    ImpactKind::Hit
+                },
+            );
+            if self.enemies[i].hp <= 0. {
                 self.kill(i, sim, events);
             }
         }
         if hit {
             self.flash = self.flash.max(0.06);
+        }
+    }
+    fn impact(&mut self, pos: Vec3, direction: Vec3, kind: ImpactKind) {
+        self.hitstop = self.hitstop.max(match kind {
+            ImpactKind::Hit => 0.055,
+            ImpactKind::Heavy => 0.085,
+            ImpactKind::Break | ImpactKind::Parry => 0.11,
+            ImpactKind::Block => 0.04,
+        });
+        self.impacts.push(Impact { pos, direction: direction.normalize_or_zero(), age: 0., kind });
+        if self.impacts.len() > 12 {
+            self.impacts.remove(0);
         }
     }
     fn line_clear(&self, a: Vec3, z: Vec3) -> bool {
@@ -989,6 +1070,7 @@ impl Game for Dented {
         let Some(pid) = sim.state.player else {
             return out;
         };
+        self.frozen = false;
         self.player_pos = sim.feet(pid).unwrap_or(self.player_pos);
         self.mode_time += dt;
         self.notice_time = (self.notice_time - dt).max(0.);
@@ -1048,7 +1130,33 @@ impl Game for Dented {
             out.insert(pid, InputFrame::default());
             return out;
         }
+        for impact in &mut self.impacts {
+            impact.age += dt;
+        }
+        self.impacts.retain(|i| i.age < 0.45);
+        // Capture taps during hitstop; a contact pause never eats the next command.
+        if input.pressed & (b::PRIMARY | b::SECONDARY | b::DODGE | b::SKILL4) != 0 {
+            self.buffer = input.pressed & (b::PRIMARY | b::SECONDARY | b::DODGE | b::SKILL4);
+            self.buffer_time = 0.30;
+        }
+        if self.hitstop > 0.0 {
+            self.hitstop = (self.hitstop - dt).max(0.0);
+            self.frozen = true;
+            for id in std::iter::once(pid).chain(self.enemies.iter().map(|e| e.id)) {
+                out.insert(id, InputFrame::default());
+                if let Some(ch) = sim.state.entities.get_mut(id).and_then(|e| e.character.as_mut()) {
+                    ch.slow = 1.;
+                    ch.dash_time = 0.;
+                }
+            }
+            return out;
+        }
         self.time += dt;
+        self.motion.reaction = (self.motion.reaction - dt).max(0.0);
+        self.motion.combo_left = (self.motion.combo_left - dt).max(0.0);
+        if self.motion.combo_left == 0.0 {
+            self.motion.combo_next = 0;
+        }
         self.regen_delay = (self.regen_delay - dt).max(0.);
         self.invuln = (self.invuln - dt).max(0.);
         self.flash = (self.flash - dt).max(0.);
@@ -1079,7 +1187,11 @@ impl Game for Dented {
             }
         }
         let aim = self.locked.map(|i| self.enemies[i].pos).or(input.aim);
-        if self.action == Action::Idle || self.guard {
+        let previous_facing = self.facing;
+        let tracking = matches!(self.action, Action::Light | Action::Heavy)
+            && self.action_total - self.action_time
+                < motion::attack(self.action, self.combo, self.progress.weapon == 1).contact - 0.10;
+        if self.action == Action::Idle || self.guard || tracking {
             if let Some(at) = aim {
                 if flat(at - self.player_pos) > 0.3 {
                     self.facing = angle(at - self.player_pos);
@@ -1088,60 +1200,92 @@ impl Game for Dented {
                 self.facing = input.move_dir.x.atan2(input.move_dir.y);
             }
         }
+        let desired_facing = self.facing;
+        let turn =
+            (desired_facing - previous_facing + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        self.facing = previous_facing + turn.clamp(-dt * 16.0, dt * 16.0);
+        self.motion.turn += (turn.clamp(-0.6, 0.6) - self.motion.turn) * (dt * 10.0).min(1.0);
+        self.motion.guard += ((if self.guard { 1.0 } else { 0.0 }) - self.motion.guard) * (dt * 18.0).min(1.0);
         self.buffer_time = (self.buffer_time - dt).max(0.);
         if self.buffer_time <= 0. {
             self.buffer = 0;
         }
         if input.pressed & (b::PRIMARY | b::SECONDARY) != 0 {
             self.buffer = input.pressed & (b::PRIMARY | b::SECONDARY);
-            self.buffer_time = 0.2;
+            self.buffer_time = 0.30;
         }
-        if input.just(b::DODGE) && self.stamina >= 24. && self.action != Action::Stagger {
+        let spec = motion::attack(self.action, self.combo, self.progress.weapon == 1);
+        let elapsed = self.action_total - self.action_time;
+        let attacking = matches!(self.action, Action::Light | Action::Heavy);
+        let can_evade = self.action == Action::Idle
+            || (attacking && elapsed >= spec.contact + 0.07)
+            || (self.action == Action::Heal && elapsed < 0.35);
+        let can_chain = self.action == Action::Idle || (attacking && elapsed >= spec.chain);
+        if self.buffer & b::DODGE != 0 && self.stamina >= 24. && can_evade {
             self.set_action(Action::Dodge, 0.55, 24.);
             self.invuln = 0.34;
             self.metrics.dodges += 1;
+            self.buffer = 0;
             self.guard = false;
             let d = if input.move_dir.length() > 0.1 {
                 Vec3::new(input.move_dir.x, 0., input.move_dir.y).normalize()
             } else {
                 -forward(self.facing)
             };
+            self.motion.dodge_yaw = angle(d);
             if let Some(ch) = sim.state.entities.get_mut(pid).and_then(|e| e.character.as_mut()) {
                 ch.dash_vel = d * 9.;
                 ch.dash_time = 0.38;
                 ch.dash_roll = true;
             }
             events.push(SimEvent::Roll { pos: self.player_pos });
-        } else if self.action == Action::Idle {
-            if input.just(b::POTION) && self.flasks > 0 && self.hp < self.progress.max_hp() {
+        } else if can_chain {
+            if self.action == Action::Idle && input.just(b::POTION) && self.flasks > 0 && self.hp < self.progress.max_hp() {
                 self.flasks -= 1;
                 self.metrics.heals += 1;
                 self.set_action(Action::Heal, 0.95, 0.);
                 events.push(SimEvent::Potion { pos: self.player_pos });
-            } else if input.just(b::SKILL4) && self.stamina >= 15. {
-                self.set_action(Action::Parry, 0.6, 15.);
+            } else if self.buffer & b::SKILL4 != 0 && self.stamina >= 15. {
+                self.set_action(Action::Parry, 0.48, 15.);
+                self.buffer = 0;
                 events.push(SimEvent::Swing { pos: self.player_pos, heavy: false });
             } else if self.buffer & b::SECONDARY != 0 && self.stamina >= 34. {
-                self.set_action(Action::Heavy, if self.progress.weapon == 1 { 1.15 } else { 0.95 }, 34.);
+                self.set_action(Action::Heavy, motion::attack(Action::Heavy, 0, self.progress.weapon == 1).duration, 34.);
+                self.motion.combo_next = 0;
                 self.metrics.heavies += 1;
                 self.buffer = 0;
-                events.push(SimEvent::Swing { pos: self.player_pos, heavy: true });
             } else if self.buffer & b::PRIMARY != 0 && self.stamina >= 18. {
-                self.set_action(Action::Light, if self.progress.weapon == 1 { 0.75 } else { 0.52 }, 18.);
-                self.combo = (self.combo + 1) % 3;
+                self.combo = self.motion.combo_next;
+                self.set_action(
+                    Action::Light,
+                    motion::attack(Action::Light, self.combo, self.progress.weapon == 1).duration,
+                    18.,
+                );
+                self.motion.combo_next = (self.combo + 1) % 3;
+                self.motion.combo_left = self.action_total + 0.45;
                 self.metrics.lights += 1;
                 self.buffer = 0;
-                events.push(SimEvent::Swing { pos: self.player_pos, heavy: false });
             } else if input.just(b::INTERACT | b::ACCEPT) {
                 self.interact(sim, events);
+                if self.mode == Mode::Playing && self.notice_time > 3.9 {
+                    self.set_action(Action::Interact, 0.55, 0.);
+                }
             }
             if input.just(b::KIT) {
                 self.switch_weapon();
+                if self.progress.relic {
+                    self.set_action(Action::Equip, 0.45, 0.);
+                }
             }
         }
         let elapsed = self.action_total - self.action_time;
+        let attack = motion::attack(self.action, self.combo, self.progress.weapon == 1);
+        if matches!(self.action, Action::Light | Action::Heavy) && !self.motion.swing_sound && elapsed >= attack.contact - 0.08 {
+            self.motion.swing_sound = true;
+            events.push(SimEvent::Swing { pos: self.player_pos, heavy: self.action == Action::Heavy });
+        }
         if !self.hit_done {
-            if matches!(self.action, Action::Light | Action::Heavy) && elapsed >= self.action_total * 0.46 {
+            if matches!(self.action, Action::Light | Action::Heavy) && elapsed >= attack.contact {
                 self.strike(sim, events);
                 self.hit_done = true;
             }
@@ -1152,7 +1296,15 @@ impl Game for Dented {
             }
         }
         if let Some(ch) = sim.state.entities.get_mut(pid).and_then(|e| e.character.as_mut()) {
-            ch.slow = if self.action == Action::Idle { if self.guard { 0.6 } else { 0. } } else { 0.83 };
+            ch.slow = if self.action == Action::Idle { if self.guard { 0.55 } else { 0. } } else { 0.94 };
+            if matches!(self.action, Action::Light | Action::Heavy) {
+                let speed = attack.root_speed(elapsed);
+                if speed > 0.0 {
+                    ch.dash_vel = forward(self.facing) * speed;
+                    ch.dash_time = dt * 1.5;
+                    ch.dash_roll = false;
+                }
+            }
             ch.face = Some(self.facing);
             ch.invuln = self.invuln;
         }
@@ -1166,7 +1318,8 @@ impl Game for Dented {
         for i in 0..self.enemies.len() {
             let e = &self.enemies[i];
             if e.hp <= 0. {
-                out.insert(e.id, InputFrame::default());
+                self.enemies[i].death_time += dt;
+                out.insert(self.enemies[i].id, InputFrame::default());
                 continue;
             }
             let pos = sim.feet(e.id).unwrap_or(e.pos);
@@ -1178,6 +1331,7 @@ impl Game for Dented {
             let e = &mut self.enemies[i];
             e.pos = pos;
             e.flash = (e.flash - dt).max(0.);
+            e.motion.reaction = (e.motion.reaction - dt).max(0.0);
             e.timer = (e.timer - dt).max(0.);
             e.poise = (e.poise - dt * 4.).max(0.);
             if e.boss() && e.hp < e.max_hp * 0.5 && e.phase == 1 {
@@ -1270,6 +1424,7 @@ impl Game for Dented {
                                         e.duration = 2.4;
                                         self.stamina = (self.stamina + 25.).min(self.progress.max_stamina());
                                         events.push(SimEvent::Block { pos: self.player_pos });
+                                        self.impact(self.player_pos + Vec3::Y * 1.3, -delta, ImpactKind::Parry);
                                         self.announce("OATHBREAK · Strike now");
                                     } else {
                                         self.damage_player(
@@ -1308,7 +1463,7 @@ impl Game for Dented {
         out
     }
     fn post(&mut self, sim: &mut Sim, dt: f32, events: &mut Vec<SimEvent>) {
-        if self.mode != Mode::Playing {
+        if self.mode != Mode::Playing || self.frozen {
             // Menus still tick to accept input and count attract inactivity. Pin the actors
             // after physics so jumping/falling characters cannot drift while the game waits.
             let lift = Vec3::Y * crate::character::PLACE_LIFT;
@@ -1322,7 +1477,19 @@ impl Game for Dented {
             }
             return;
         }
+        let previous_pos = self.player_pos;
         self.player_pos = sim.state.player.and_then(|id| sim.feet(id)).unwrap_or(self.player_pos);
+        let velocity = (self.player_pos - previous_pos) / dt.max(0.001);
+        self.motion.velocity = velocity;
+        self.motion.speed += (flat(velocity) - self.motion.speed) * (dt * 14.0).min(1.0);
+        self.motion.stride += flat(self.player_pos - previous_pos) / 2.8;
+        let grounded = sim.player().and_then(|p| p.character.as_ref()).is_some_and(|ch| ch.grounded);
+        if grounded && !self.motion.grounded && self.motion.air_time > 0.1 {
+            self.motion.landing = 0.24;
+        }
+        self.motion.landing = (self.motion.landing - dt).max(0.0);
+        self.motion.air_time = if grounded { 0.0 } else { self.motion.air_time + dt };
+        self.motion.grounded = grounded;
         // Mist is crossed only through the interaction, so it cannot be bypassed on foot.
         if !self.boss_active && !self.progress.guardian && self.player_pos.z < -12. {
             self.player_pos.z = -11.7;
@@ -1343,7 +1510,11 @@ impl Game for Dented {
         }
         for e in &mut self.enemies {
             if e.hp > 0. {
-                e.pos = sim.feet(e.id).unwrap_or(e.pos);
+                let next = sim.feet(e.id).unwrap_or(e.pos);
+                e.motion.velocity = (next - e.pos) / dt.max(0.001);
+                e.motion.speed += (flat(e.motion.velocity) - e.motion.speed) * (dt * 14.0).min(1.0);
+                e.motion.stride += flat(next - e.pos) / 2.8;
+                e.pos = next;
             }
         }
         let mut hits = Vec::new();

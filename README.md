@@ -4,6 +4,8 @@
 
 An original Souls-inspired action RPG vertical slice, built on the **Shardfall / Pavilion** engine in Rust and WebGPU. One authored ruined abbey connects deliberate melee combat, exploration, a hidden weapon, two sanctuaries, recoverable death currency, permanent upgrades, a looping shortcut, and Vesper, a two-phase bell guardian.
 
+**v0.2.0 combat revision:** library-driven full-body animation, a three-hit sword chain, two-handed greatblade grip, hitstop and recoil, blade trails, stronger impact audio, and cel shading. [Revision and verification](docs/game/COMBAT-REVISION.md).
+
 The default scene is the game. The engine's original workshop and tools remain available for expansion. This repository preserves its upstream history; original engine documentation is in [the upstream README](docs/game/UPSTREAM_README.md).
 
 ## Play and build
@@ -56,7 +58,7 @@ A standard-mapped PS5 DualSense is the primary layout. Keyboard/mouse actions fo
 | Menu navigation | D-pad / left stick | Arrows |
 | Return | Circle | Backspace |
 
-Light and heavy attacks consume stamina and commit to an animation. Evades have a short invulnerable window. Guarding absorbs most frontal damage at a stamina cost; a well-timed parry staggers a melee enemy. A heavy blow breaks poise. Read windups and punish recovery. The second phase of Vesper adds a spread of spectral bolts.
+Tap light attack again during a swing to chain three distinct strikes. Inputs pressed during impact pauses are buffered. Dodge after contact to cancel recovery; the windup remains committed. Light and heavy attacks consume stamina. Evades have a short invulnerable window. Guarding absorbs most frontal damage at a stamina cost; a well-timed parry staggers a melee enemy. A heavy blow breaks poise. Read windups and punish recovery. The second phase of Vesper adds a spread of spectral bolts.
 
 Rest refills health and three flasks and revives ordinary enemies. Echoes buy vitality and weapon improvements. Death leaves your carried echoes at the fall; another death replaces that cache. Opened gates, the relic, blessings, and the defeated guardian persist. Ring the final bell to complete the pilgrimage, then explore the quiet abbey or begin again.
 
@@ -78,7 +80,7 @@ scripts/test-dented.sh
 ./target/debug/pav bench scene=dented/play ticks=1200
 ```
 
-The final hardware run averaged **60.03 FPS at 1920×1080** in Windows Chrome on the RTX 3060 Ti; ten seeded campaigns won 10/10. See [the verification record](docs/game/VERIFICATION.md) for checks and platform limits.
+The final hardware run averaged **60.01 FPS at 1920×1080** in Windows Chrome on the RTX 3060 Ti; ten seeded campaigns won 10/10. See [the verification record](docs/game/VERIFICATION.md) for checks and platform limits.
 
 Start with [the game plan](docs/game/PLAN.md), [engine feedback](docs/game/ENGINE_FEEDBACK.md), and the engine's [MAKE_A_GAME](docs/MAKE_A_GAME.md) guide. The original brief is preserved in [BRIEF.txt](docs/game/BRIEF.txt). The 50 generated names, random selection method and suffix are recorded in [naming.json](docs/game/naming.json).
 

@@ -290,19 +290,32 @@ pub fn sounds_for(ev: &SimEvent) -> Vec<(Patch, f32)> {
             let v = (power.sqrt() / 4.0).clamp(0.35, 1.2) * if *crit { 1.3 } else { 1.0 };
             let tone = [150.0, 120.0, 520.0, 900.0, 260.0][(*element as usize).min(4)];
             let mut out = vec![
-                (Patch { decay: 0.07, volume: 0.24 * v, cutoff: 3200.0, cutoff_end: 400.0, ..Patch::new(Noise, 1.0) }, 0.0),
+                (
+                    Patch {
+                        attack: 0.001,
+                        decay: 0.045,
+                        volume: 0.29 * v,
+                        cutoff: 5600.0,
+                        cutoff_end: 650.0,
+                        ..Patch::new(Noise, 1.0)
+                    },
+                    0.0,
+                ),
                 (
                     Patch {
                         freq_end: tone * 0.5,
                         glide: 0.08,
-                        decay: 0.1,
-                        volume: 0.2 * v,
-                        duty: 0.35,
-                        ..Patch::new(Square, tone)
+                        attack: 0.001,
+                        decay: 0.13,
+                        volume: 0.30 * v,
+                        ..Patch::new(Sine, tone)
                     },
                     0.0,
                 ),
             ];
+            // Short, inharmonic metal partials sit above the low body of the impact.
+            out.push((Patch { attack: 0.001, decay: 0.085, volume: 0.10 * v, ..Patch::new(Triangle, 930.0) }, 0.0));
+            out.push((Patch { attack: 0.001, decay: 0.055, volume: 0.055 * v, ..Patch::new(Sine, 1547.0) }, 0.0));
             if *crit {
                 out.push((Patch { decay: 0.18, volume: 0.12, ..Patch::new(Triangle, 1760.0) }, 0.01));
             }

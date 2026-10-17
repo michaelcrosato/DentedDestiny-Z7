@@ -1002,6 +1002,17 @@ impl ViewBuilder {
                 scene.camera = shaken.data(aspect);
             }
         }
+        if let Some(g) = &curr.hud.dented {
+            if g.options.shake {
+                if let Some(hit) = g.impacts.last().filter(|i| i.age < 0.22) {
+                    let decay = (1.0 - hit.age / 0.22).powi(2) * hit.strength();
+                    let impulse = hit.direction * (hit.age * 53.).cos() * 0.07 + Vec3::Y * (hit.age * 71.).sin() * 0.04;
+                    let mut shaken = rig.clone();
+                    shaken.target += impulse * decay;
+                    scene.camera = shaken.data(aspect);
+                }
+            }
+        }
         let since = self.last_time.map(|t| (time - t).max(0.0)).unwrap_or(0.0);
         let dt = since.min(0.1);
         self.last_time = Some(time);
@@ -1454,6 +1465,9 @@ impl ViewBuilder {
             scene.sdfs.push(sd);
         }
         self.emit_effects(&mut scene);
+        if curr.hud.dented.is_some() {
+            scenery.extend([0, 1]);
+        }
         scenery.sort_unstable();
         mark_objects(&mut scene, env_end, &scenery);
         if settings.style == StyleOverride::PerObject {

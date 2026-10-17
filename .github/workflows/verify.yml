@@ -19,5 +19,7 @@ jobs:
         run: cargo test --locked -p pav_core --test dented --test games
       - name: Engine navigation
         run: "cargo test --locked -p pav_core --lib nav::"
+      - name: Animation library and recovery transitions
+        run: "cargo test --locked -p pav_view --lib dented_motion::tests"
       - name: Browser compile
         run: cargo check --locked -p pav_app --target wasm32-unknown-unknown

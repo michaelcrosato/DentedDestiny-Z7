@@ -860,8 +860,9 @@ pub struct PuppetPart {
     pub glow: f32,
 }
 
-/// Two-bone IK: returns the joint (knee/elbow) position.
-pub(crate) fn ik(root: Vec3, target: Vec3, l1: f32, l2: f32, bend: Vec3) -> (Vec3, Vec3) {
+/// Two-bone IK: returns the joint (knee/elbow) and reachable end position.
+/// `bend` selects the plane of the joint; targets beyond the limb are clamped.
+pub fn ik(root: Vec3, target: Vec3, l1: f32, l2: f32, bend: Vec3) -> (Vec3, Vec3) {
     let mut d = target - root;
     let dist = d.length().max(1e-4);
     let reach = (l1 + l2) * 0.999;

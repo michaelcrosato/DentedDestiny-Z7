@@ -20,6 +20,7 @@ use crate::input::InputFrame;
 use crate::sim::Sim;
 
 pub mod dented;
+pub mod dented_motion;
 pub mod starter;
 
 /// Every game the engine knows. `load scene=<key>` (or `<key>/<rest>`) builds it.

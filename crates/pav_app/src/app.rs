@@ -1173,14 +1173,14 @@ impl App {
                 self.rig.params.tilt = 15.0;
                 self.rig.params.distance = 22.0;
             } else {
-                self.rig.params.distance = if g.options.camera == 1 { 20.0 } else { 12.0 };
+                self.rig.params.distance = if g.options.camera == 1 { 20.0 } else { 9.0 };
                 if self.rig.params.tilt < 16.0 {
-                    self.rig.params.tilt = 32.0;
+                    self.rig.params.tilt = 26.0;
                 }
                 if g.options.camera == 1 {
                     self.rig.params.tilt = 57.0;
                 } else if prev.hud.dented.as_ref().is_some_and(|old| old.options.camera != g.options.camera) {
-                    self.rig.params.tilt = 32.0;
+                    self.rig.params.tilt = 26.0;
                 }
                 if let Some(e) = g.locked.and_then(|i| g.enemies.get(i)) {
                     focus = focus.lerp(e.pos + Vec3::Y, 0.22);
@@ -1200,14 +1200,11 @@ impl App {
                     }
                 }
                 if g.boss_active {
-                    self.rig.params.distance = if g.options.camera == 1 { 22.0 } else { 17.0 };
-                    self.rig.params.tilt = self.rig.params.tilt.max(37.0);
+                    self.rig.params.distance = if g.options.camera == 1 { 22.0 } else { 12.5 };
+                    self.rig.params.tilt = self.rig.params.tilt.max(30.0);
                     if let Some(boss) = g.enemies.iter().find(|e| e.boss() && e.hp > 0.0) {
                         focus = focus.lerp(boss.pos + Vec3::Y * 1.5, 0.25);
                     }
-                }
-                if g.options.shake && g.flash > 0.0 {
-                    focus.x += (curr.time as f32 * 92.0).sin() * g.flash * 0.16;
                 }
             }
         }

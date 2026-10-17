@@ -30,10 +30,16 @@ impl Art<'_> {
             transform: Mat4::from_scale_rotation_translation(size, r, p),
             color: color(c),
             emissive: glow,
-            style: Style::Lit,
-            flags: if self.group > 1 { flags::OBJECT | flags::NO_CUT } else { 0 },
+            style: if glow > 0.0 { Style::Unlit } else { Style::Cel },
+            flags: if glow > 0.0 {
+                flags::NO_SHADOW | flags::NO_CUT
+            } else if self.group > 1 {
+                flags::OBJECT | flags::NO_CUT
+            } else {
+                0
+            },
             group: self.group,
-            material: if glow > 0.0 || matches!(key, MeshKey::Tuft) {
+            material: if self.group > 1 || glow > 0.0 || matches!(key, MeshKey::Tuft) {
                 0
             } else if ["#9f8856", "#b49a59", "#c5c9b5", "#a3a9a1", "#8d8c77", "#737c70"].contains(&c) {
                 self.mats[3]
@@ -268,10 +274,11 @@ fn world(a: &mut Art<'_>, g: &Dented, t: f32) {
     for (i, p) in g.rules.shrines.iter().enumerate() {
         a.cyl(*p + Vec3::Y * 0.12, 1., 0.24, "#3b4542");
         a.ring(*p + Vec3::Y * 0.25, 0.9, 0.045, "#d5bb74", 0.5, false);
-        a.cyl(*p + Vec3::Y * 0.6, 0.15, 0.9, "#a89768");
-        a.flame(*p + Vec3::Y * 0.9, t);
+        let beacon = *p + Vec3::X * 0.68;
+        a.cyl(beacon + Vec3::Y * 0.6, 0.15, 0.9, "#a89768");
+        a.flame(beacon + Vec3::Y * 0.9, t);
         a.s.point_lights.push(PointLight {
-            position: *p + Vec3::Y * 1.4,
+            position: beacon + Vec3::Y * 1.4,
             color: color("#ffd18b") * 3.,
             radius: 7.,
             shadows: i == 0,
@@ -341,140 +348,273 @@ fn knight(
     scale: f32,
     t: f32,
     moving: f32,
-    action: Action,
-    phase: f32,
-    guard: bool,
+    sk: &pav_core::puppet::Skel,
     kind: Option<Kind>,
     flash: f32,
     great: bool,
+    heal: bool,
 ) {
     let boss = kind == Some(Kind::Guardian);
     let caster = kind == Some(Kind::Cantor);
     let lancer = kind == Some(Kind::Lancer);
     let cloak = if boss {
-        "#272d31"
+        "#442d68"
     } else if kind.is_some() {
-        "#52594a"
+        "#236b69"
     } else {
-        "#613d37"
+        "#d64c37"
     };
-    let steel = if flash > 0.15 {
-        "#fff2c3"
+    let steel = if flash > 0.06 {
+        "#fff7cf"
     } else if boss {
-        "#8d8c77"
+        "#858bb4"
     } else if kind.is_some() {
-        "#737c70"
+        "#839e99"
     } else {
-        "#a3a9a1"
+        "#eee4c8"
     };
-    let gold = if boss { "#b49a59" } else { "#9f8856" };
-    let roll = if action == Action::Dodge { Quat::from_rotation_x(phase * std::f32::consts::TAU) } else { Quat::IDENTITY };
-    let body = Quat::from_rotation_y(yaw) * roll;
-    let pivot = pos + Vec3::Y * if action == Action::Dodge { 0.6 * scale } else { 0. };
-    let at = |v: Vec3| pivot + body * (v * scale);
-    let leg = (t * 9.).sin() * 0.45 * moving.min(1.);
-    let breath = (t * 2.).sin() * 0.025;
-    for (x, sgn) in [(-0.19, -1.), (0.19, 1.)] {
-        let hip = Vec3::new(x, 0.85, 0.);
-        let knee = Vec3::new(x, 0.5, leg * sgn);
-        let ankle = Vec3::new(x, 0.13, -leg * sgn * 0.65);
-        a.beam(at(hip), at(knee), 0.115 * scale, steel);
-        a.beam(at(knee), at(ankle), 0.095 * scale, steel);
-        a.mesh(MeshKey::Cube, at(ankle + Vec3::Z * 0.08), Vec3::new(0.23, 0.19, 0.4) * scale, body, "#343b37", 0.);
-        a.sphere(at(knee), Vec3::new(0.22, 0.24, 0.2) * scale, gold, 0.);
+    let gold = if boss { "#f3ba53" } else { "#dca34c" };
+    let dark = "#233b4a";
+    let body = Quat::from_rotation_y(yaw);
+    let at = |p: Vec3| pos + body * (p * scale);
+    let chest = body * sk.chest_rot;
+    let pelvis = body * sk.pelvis_rot;
+    let head = body * sk.head_rot;
+    let shaped = MeshKey::rounded_box(Vec3::splat(0.5), 0.14);
+    // Separate articulated upper/lower limbs: black joints read through ivory armour.
+    for i in 0..2 {
+        a.beam(at(sk.hip[i]), at(sk.knee[i]), 0.104 * scale, dark);
+        a.beam(at(sk.knee[i]), at(sk.ankle[i]), 0.092 * scale, dark);
+        let leg_q = body * Quat::from_rotation_arc(Vec3::Y, (sk.knee[i] - sk.ankle[i]).normalize_or(Vec3::Y));
+        a.mesh(shaped, at(sk.ankle[i].lerp(sk.knee[i], 0.53)), Vec3::new(0.21, 0.33, 0.23) * scale, leg_q, steel, 0.);
+        a.sphere(at(sk.knee[i]), Vec3::new(0.235, 0.21, 0.24) * scale, gold, 0.);
+        let foot_q = body * Quat::from_rotation_arc(Vec3::Z, sk.toe[i]);
+        a.mesh(shaped, at(sk.ankle[i] + sk.toe[i] * 0.10), Vec3::new(0.24, 0.18, 0.40) * scale, foot_q, dark, 0.);
+        a.beam(at(sk.shoulder[i]), at(sk.elbow[i]), 0.082 * scale, dark);
+        a.beam(at(sk.elbow[i]), at(sk.hand[i]), 0.074 * scale, dark);
+        let forearm = body * Quat::from_rotation_arc(Vec3::Y, (sk.elbow[i] - sk.hand[i]).normalize_or(Vec3::Y));
+        a.mesh(shaped, at(sk.hand[i].lerp(sk.elbow[i], 0.56)), Vec3::new(0.19, 0.25, 0.20) * scale, forearm, steel, 0.);
+        a.mesh(shaped, at(sk.shoulder[i]), Vec3::new(0.36, 0.25, 0.39) * scale, chest, steel, 0.);
+        a.sphere(at(sk.hand[i]), Vec3::splat(0.17 * scale), dark, 0.);
     }
-    a.mesh(MeshKey::Sphere, at(Vec3::new(0., 1.18 + breath, 0.)), Vec3::new(0.64, 0.77, 0.4) * scale, body, steel, 0.);
-    a.mesh(MeshKey::Cube, at(Vec3::new(0., 0.87, 0.)), Vec3::new(0.61, 0.12, 0.45) * scale, body, gold, 0.);
-    a.mesh(MeshKey::Cone, at(Vec3::new(0., 0.76, 0.)), Vec3::new(0.65, 0.55, 0.47) * scale, body, cloak, 0.);
-    a.mesh(MeshKey::Cube, at(Vec3::new(0., 1.27, 0.2)), Vec3::new(0.08, 0.5, 0.04) * scale, body, gold, 0.);
-    a.mesh(MeshKey::Cube, at(Vec3::new(0., 1.38, 0.21)), Vec3::new(0.36, 0.065, 0.04) * scale, body, gold, 0.);
-    // Segmented cape follows motion with a delayed wave.
-    for i in 0..8 {
-        let n = i as f32;
-        let p = Vec3::new((t * 3. - n * 0.45).sin() * n * 0.009, 1.45 - n * 0.13, -0.23 - n * 0.035 - moving * 0.1);
-        a.mesh(MeshKey::Cube, at(p), Vec3::new(0.57 + n * 0.015, 0.15, 0.045) * scale, body, cloak, 0.);
-    }
-    a.sphere(at(Vec3::new(0., 1.75 + breath, 0.)), Vec3::new(0.42, 0.5, 0.4) * scale, steel, 0.);
-    a.mesh(MeshKey::Cube, at(Vec3::new(0., 1.79, 0.195)), Vec3::new(0.31, 0.045, 0.035) * scale, body, "#1f2827", 0.);
-    a.mesh(MeshKey::Cube, at(Vec3::new(0., 1.67, 0.207)), Vec3::new(0.035, 0.24, 0.035) * scale, body, gold, 0.);
-    for x in [-0.09, 0.09] {
-        a.sphere(
-            at(Vec3::new(x, 1.79, 0.218)),
-            Vec3::splat(0.034 * scale),
-            if kind.is_some() { "#ffc070" } else { "#c8ddcc" },
-            1.3,
-        );
-    }
-    if boss {
-        for x in [-0.23, 0.23] {
-            a.beam(at(Vec3::new(x, 1.88, 0.)), at(Vec3::new(x * 1.7, 2.4, -0.1)), 0.065 * scale, gold);
-        }
-        a.ring(at(Vec3::new(0., 2.15, -0.2)), 0.43 * scale, 0.025 * scale, gold, 0.3, true);
-    } else {
-        a.mesh(MeshKey::Cube, at(Vec3::new(0., 1.99, -0.04)), Vec3::new(0.07, 0.16, 0.3) * scale, body, gold, 0.);
-    }
-    let swing = match action {
-        Action::Light => ((phase * std::f32::consts::PI * 1.6).sin() * 1.6) - 0.3,
-        Action::Heavy => {
-            if phase < 0.45 {
-                -1.7 * phase / 0.45
-            } else {
-                -1.7 + (phase - 0.45) * 6.
-            }
-        }
-        _ => 0.,
-    };
-    let wrist = Vec3::new(
-        0.48 + 0.15 * swing.sin(),
-        1.0 + if matches!(action, Action::Heavy) { swing.abs() * 0.32 } else { 0. },
-        0.2 + swing.cos() * 0.16,
-    );
-    for side in [-1., 1.] {
-        let shoulder = Vec3::new(side * 0.39, 1.45, 0.);
-        let hand =
-            if side > 0. { wrist } else { Vec3::new(-0.47, if guard { 1.3 } else { 1.0 }, if guard { 0.48 } else { 0.17 }) };
-        a.sphere(at(shoulder), Vec3::new(0.35, 0.29, 0.38) * scale, steel, 0.);
-        a.beam(at(shoulder), at(hand), 0.095 * scale, steel);
-        a.sphere(at(hand), Vec3::splat(0.18 * scale), "#44483c", 0.);
-    }
-    let sr = body
-        * Quat::from_rotation_x(if lancer || caster { -0.25 } else { -0.45 + swing })
-        * Quat::from_rotation_z(if matches!(action, Action::Light) { swing } else { -0.15 });
-    let hand = at(wrist);
-    let length = if great || boss {
-        1.75
-    } else if lancer || caster {
-        2.3
-    } else {
-        1.25
-    };
+    a.mesh(shaped, at(sk.pelvis.lerp(sk.chest, 0.55)), Vec3::new(0.59, 0.53, 0.38) * scale, chest, steel, 0.);
+    a.mesh(shaped, at(sk.pelvis), Vec3::new(0.54, 0.21, 0.36) * scale, pelvis, dark, 0.);
     a.mesh(
         MeshKey::Cube,
-        hand + sr * Vec3::Y * (length * 0.44 * scale),
-        Vec3::new(if great || boss { 0.19 } else { 0.09 }, length, 0.045) * scale,
-        sr,
-        if caster { "#786443" } else { "#c5c9b5" },
+        at(sk.pelvis) + pelvis * Vec3::new(0., 0.05, 0.02) * scale,
+        Vec3::new(0.57, 0.08, 0.40) * scale,
+        pelvis,
+        gold,
         0.,
     );
-    a.mesh(MeshKey::Cube, hand + sr * Vec3::Y * 0.17 * scale, Vec3::new(0.43, 0.07, 0.1) * scale, sr, gold, 0.);
-    if caster {
-        a.sphere(hand + sr * Vec3::Y * (length * scale), Vec3::splat(0.25 * scale), "#98ccb2", 1.5);
-    } else {
+    for side in [-1., 1.] {
         a.mesh(
-            MeshKey::Cone,
-            hand + sr * Vec3::Y * (length * 0.97 * scale),
-            Vec3::new(0.15, 0.3, 0.06) * scale,
-            sr,
-            "#d8d8c3",
+            shaped,
+            at(sk.hip[if side < 0. { 0 } else { 1 }]) + pelvis * Vec3::new(side * 0.04, -0.12, 0.) * scale,
+            Vec3::new(0.25, 0.30, 0.38) * scale,
+            pelvis * Quat::from_rotation_z(side * 0.12),
+            steel,
             0.,
         );
     }
-    if !caster && !lancer {
-        let sh = at(Vec3::new(-0.55, if guard { 1.2 } else { 1.0 }, if guard { 0.5 } else { 0.1 }));
-        let q = body * Quat::from_rotation_y(if guard { 0.2 } else { -0.65 });
-        a.mesh(MeshKey::Sphere, sh, Vec3::new(0.55, 0.83, 0.14) * scale, q, gold, 0.);
-        a.mesh(MeshKey::Sphere, sh + q * Vec3::Z * 0.05 * scale, Vec3::new(0.47, 0.73, 0.11) * scale, q, cloak, 0.);
-        a.mesh(MeshKey::Cube, sh + q * Vec3::Z * 0.12 * scale, Vec3::new(0.06, 0.65, 0.025) * scale, q, gold, 0.);
+    let breast = at(sk.chest) + chest * Vec3::new(0., -0.16, 0.205) * scale;
+    a.mesh(MeshKey::Cube, breast, Vec3::new(0.07, 0.30, 0.03) * scale, chest * Quat::from_rotation_z(-0.35), gold, 0.);
+    a.mesh(MeshKey::Cube, breast, Vec3::new(0.25, 0.055, 0.035) * scale, chest * Quat::from_rotation_z(-0.35), gold, 0.);
+    a.mesh(MeshKey::Sphere, at(sk.head), Vec3::new(0.45, 0.48, 0.43) * scale, head, steel, 0.);
+    a.mesh(
+        shaped,
+        at(sk.head) + head * Vec3::new(0., 0.015, 0.205) * scale,
+        Vec3::new(0.34, 0.092, 0.05) * scale,
+        head,
+        dark,
+        0.,
+    );
+    a.mesh(
+        MeshKey::Cube,
+        at(sk.head) + head * Vec3::new(0., -0.065, 0.235) * scale,
+        Vec3::new(0.045, 0.24, 0.045) * scale,
+        head,
+        gold,
+        0.,
+    );
+    for x in [-0.09, 0.09] {
+        a.mesh(
+            MeshKey::Cube,
+            at(sk.head) + head * Vec3::new(x, 0.025, 0.238) * scale,
+            Vec3::new(0.06, 0.026, 0.016) * scale,
+            head,
+            if kind.is_some() { "#ffb749" } else { "#a5f7ec" },
+            0.6,
+        );
+    }
+    a.mesh(shaped, at(sk.neck), Vec3::new(0.48, 0.15, 0.44) * scale, chest, cloak, 0.);
+    if boss {
+        for x in [-0.23, 0.23] {
+            a.beam(
+                at(sk.head + sk.head_rot * Vec3::new(x, 0.12, 0.)),
+                at(sk.head + sk.head_rot * Vec3::new(x * 1.65, 0.67, -0.12)),
+                0.05 * scale,
+                gold,
+            );
+        }
+    } else {
+        a.mesh(
+            shaped,
+            at(sk.head) + head * Vec3::new(0., 0.24, -0.025) * scale,
+            Vec3::new(0.075, 0.14, 0.35) * scale,
+            head,
+            gold,
+            0.,
+        );
+    }
+    // A continuous, tapered cloth surface follows the chest with delayed secondary motion.
+    let mut cloth = pav_render::mesh::MeshData::default();
+    let corner = |u: f32, side: f32| {
+        let wave = (t * 7.0 - u * 5.0).sin() * u * 0.045 + (t * 3.2 - u * 3.0).sin() * u * 0.035;
+        let p = sk.chest
+            + sk.chest_rot
+                * Vec3::new(
+                    side * (0.30 + u * 0.07) + wave,
+                    -u * 0.95 + side.abs() * u.powi(8) * 0.12,
+                    -0.24 - u * (0.13 + moving.min(1.0) * 0.28) + wave * 0.8 + (side * 5.0 + t * 4.0 - u * 4.0).sin() * u * 0.035,
+                );
+        at(p)
+    };
+    for i in 0..9 {
+        let u = i as f32 / 9.;
+        let v = (i + 1) as f32 / 9.;
+        for column in 0..4 {
+            let left = -1.0 + column as f32 * 0.5;
+            let right = left + 0.5;
+            let p = [corner(u, left), corner(v, left), corner(v, right), corner(u, right)];
+            let n = (p[1] - p[0]).cross(p[2] - p[0]).normalize_or(Vec3::NEG_Z);
+            cloth.push_quad(p, n);
+        }
+    }
+    a.s.dynamic.push(pav_render::scene::DynamicMesh {
+        data: cloth,
+        color: color(cloak),
+        emissive: 0.,
+        style: Style::Cel,
+        flags: flags::OBJECT | flags::NO_CUT | flags::TWO_SIDED,
+        group: a.group,
+        material: 0,
+    });
+    // Attach blade and shield to the actual wrists, including wrist and torso rotation.
+    let hand = at(sk.hand[1]);
+    let weapon = body * sk.weapon;
+    let sr = Quat::from_rotation_arc(Vec3::Y, weapon);
+    let length = if great || boss {
+        1.65
+    } else if lancer || caster {
+        2.2
+    } else {
+        1.20
+    };
+    a.mesh(shaped, hand - weapon * 0.06 * scale, Vec3::new(0.095, 0.29, 0.095) * scale, sr, dark, 0.);
+    a.mesh(shaped, hand + weapon * 0.13 * scale, Vec3::new(0.43, 0.075, 0.12) * scale, sr, gold, 0.);
+    a.mesh(
+        MeshKey::Cube,
+        hand + weapon * (length * 0.5 + 0.13) * scale,
+        Vec3::new(if great || boss { 0.22 } else { 0.115 }, length, 0.055) * scale,
+        sr,
+        if caster { gold } else { "#d4f1ed" },
+        0.,
+    );
+    a.mesh(
+        MeshKey::Cube,
+        hand + weapon * (length * 0.5 + 0.13) * scale + sr * Vec3::Z * 0.035 * scale,
+        Vec3::new(0.026, length * 0.9, 0.008) * scale,
+        sr,
+        "#fff5d5",
+        0.25,
+    );
+    a.mesh(MeshKey::Cone, hand + weapon * (length + 0.20) * scale, Vec3::new(0.13, 0.23, 0.055) * scale, sr, "#fff5d5", 0.);
+    if caster {
+        a.sphere(hand + weapon * (length + 0.2) * scale, Vec3::splat(0.24 * scale), "#78e8c7", 1.4);
+    }
+    if heal {
+        let p = at(sk.hand[0]);
+        a.sphere(p, Vec3::new(0.16, 0.22, 0.16) * scale, "#ffc469", 0.7);
+        a.mesh(MeshKey::Cylinder, p + chest * Vec3::Y * 0.13 * scale, Vec3::new(0.08, 0.08, 0.08) * scale, chest, gold, 0.);
+    } else if !caster && !lancer && !great && !boss {
+        let q = chest * Quat::from_rotation_y(-0.2);
+        let shield = at(sk.hand[0]) + q * Vec3::new(0., 0., 0.08) * scale;
+        a.mesh(shaped, shield, Vec3::new(0.50, 0.66, 0.13) * scale, q, dark, 0.);
+        a.mesh(shaped, shield + q * Vec3::Z * 0.065 * scale, Vec3::new(0.42, 0.57, 0.05) * scale, q, gold, 0.);
+        a.mesh(shaped, shield + q * Vec3::Z * 0.095 * scale, Vec3::new(0.35, 0.49, 0.025) * scale, q, cloak, 0.);
+        a.mesh(MeshKey::Cube, shield + q * Vec3::Z * 0.12 * scale, Vec3::new(0.045, 0.40, 0.025) * scale, q, "#f8df9b", 0.);
+    }
+}
+
+fn sword_trail(a: &mut Art<'_>, g: &Dented, p: Vec3) {
+    if !matches!(g.action, Action::Light | Action::Heavy) {
+        return;
+    }
+    let elapsed = g.action_total - g.action_time;
+    let spec = pav_core::games::dented_motion::attack(g.action, g.combo, g.progress.weapon == 1);
+    if elapsed < spec.contact - 0.075 || elapsed > spec.contact + 0.16 {
+        return;
+    }
+    let q = Quat::from_rotation_y(g.facing);
+    let mut mesh = pav_render::mesh::MeshData::default();
+    let length = if g.progress.weapon == 1 { 1.85 } else { 1.4 };
+    for i in 0..9 {
+        let t0 = (elapsed - i as f32 * 0.009).max(0.);
+        let t1 = (t0 - 0.009).max(0.);
+        let s0 = crate::dented_motion::attack_pose(g.action, g.combo, g.progress.weapon == 1, t0);
+        let s1 = crate::dented_motion::attack_pose(g.action, g.combo, g.progress.weapon == 1, t1);
+        let width = (1. - i as f32 / 9.) * 0.24;
+        let pt = |s: &pav_core::puppet::Skel, d: f32| p + q * (s.hand[1] + s.weapon * d);
+        let quad = [pt(&s0, length - width), pt(&s1, length - width * 0.85), pt(&s1, length), pt(&s0, length)];
+        let normal = (quad[1] - quad[0]).cross(quad[2] - quad[0]).normalize_or(Vec3::Y);
+        mesh.push_quad(quad, normal);
+    }
+    a.s.dynamic.push(pav_render::scene::DynamicMesh {
+        data: mesh,
+        color: color(if g.action == Action::Heavy { "#ffc45f" } else { "#a6f5e9" }),
+        emissive: 0.8,
+        style: Style::Unlit,
+        flags: flags::NO_SHADOW | flags::NO_CUT | flags::TWO_SIDED,
+        group: 0,
+        material: 0,
+    });
+}
+
+fn impacts(a: &mut Art<'_>, g: &Dented) {
+    use pav_core::games::dented_motion::ImpactKind;
+    a.group = 0;
+    for impact in &g.impacts {
+        let t = impact.age;
+        let strength = impact.strength();
+        let ink = if matches!(impact.kind, ImpactKind::Parry | ImpactKind::Block) { "#8dfbec" } else { "#ffcc63" };
+        let camera = a.s.camera.forward;
+        let right = camera.cross(Vec3::Y).normalize_or(Vec3::X);
+        let up = right.cross(camera).normalize_or(Vec3::Y);
+        if t < 0.12 {
+            let r = (0.32 + t * 6.) * strength;
+            for i in 0..6 {
+                let n = i as f32 * std::f32::consts::TAU / 6.;
+                let d = right * n.cos() + up * n.sin();
+                let length = if i % 2 == 0 { 1.0 } else { 0.6 };
+                a.mesh(
+                    MeshKey::Cone,
+                    impact.pos + d * r * length,
+                    Vec3::new(0.10 * (1. - t / 0.12), r * length * 1.9, 0.04),
+                    Quat::from_rotation_arc(Vec3::Y, d),
+                    "#fff6cd",
+                    1.0,
+                );
+            }
+        }
+        for i in 0..12 {
+            let n = i as f32;
+            let direction = (right * (n * 2.4).cos() + up * (n * 2.4).sin() + impact.direction * 0.4).normalize_or(Vec3::Y);
+            let speed = (2.5 + hash(i) * 4.) * strength;
+            let pos = impact.pos + direction * t * speed - Vec3::Y * t * t * 4.;
+            let length = (1. - t / 0.45).max(0.) * (0.18 + strength * 0.2);
+            a.mesh(MeshKey::Cone, pos, Vec3::new(0.035, length, 0.035), Quat::from_rotation_arc(Vec3::Y, direction), ink, 0.8);
+        }
     }
 }
 
@@ -502,7 +642,16 @@ pub fn emit(
             .map(|s| s.param(0))
             .unwrap_or(0)
     });
+    scene.post.outlines = true;
+    scene.post.outline_px = 1.5;
+    scene.post.outline_part = pav_render::scene::Part::Objects;
+    scene.post.outline_darken = 0.18;
+    scene.post.outline_color = Some(color("#182e40"));
+    scene.post.outline_normal = 0.25;
     for mesh in &mut scene.meshes {
+        if mesh.style != Style::Unlit {
+            mesh.style = Style::Cel;
+        }
         if mesh.group == 1 {
             mesh.material = if mesh.transform.y_axis.truncate().length() > 0.8 { mats[1] } else { mats[0] };
         }
@@ -511,54 +660,47 @@ pub fn emit(
     world(&mut a, g, time);
     let old = prev.hud.dented.as_deref().unwrap_or(g);
     let p = old.player_pos.lerp(g.player_pos, alpha);
-    let speed = (g.player_pos - old.player_pos).length() / curr.dt.max(0.01) / 4.6;
     a.group = 10000;
+    let pose = crate::dented_motion::player(g, old, alpha);
     knight(
         &mut a,
         p,
-        g.facing,
+        crate::dented_motion::yaw_lerp(old.facing, g.facing, alpha),
         1.,
-        time,
-        speed,
-        g.action,
-        1. - g.action_time / g.action_total.max(0.01),
-        g.guard,
+        g.time,
+        g.motion.speed / 4.6,
+        &pose,
         None,
         g.flash,
         g.progress.weapon == 1,
+        g.action == Action::Heal,
     );
+    sword_trail(&mut a, g, p);
     if g.action == Action::Heal {
         a.ring(p + Vec3::Y * 0.15, 0.8, 0.04, "#eac579", 0.8, false);
     }
     for (i, e) in g.enemies.iter().enumerate() {
-        if e.hp <= 0. {
+        if e.hp <= 0. && e.death_time > 2.5 {
             continue;
         }
         a.group = 10001 + i as u32;
         let olde = old.enemies.iter().find(|o| o.id == e.id).unwrap_or(e);
         let p = olde.pos.lerp(e.pos, alpha);
-        let move_speed = (e.pos - olde.pos).length() / curr.dt.max(0.01) / 2.;
         let phase = 1. - e.timer / e.duration.max(0.01);
-        let (action, ph) = if e.intent == Intent::Windup {
-            (Action::Heavy, phase * 0.43)
-        } else if e.intent == Intent::Recover {
-            (Action::Heavy, 0.43 + phase * 0.57)
-        } else {
-            (Action::Idle, 0.)
-        };
+        let pose = crate::dented_motion::enemy(e, g.time + i as f32);
+        let sink = if e.hp <= 0. { ((e.death_time - 1.6).max(0.) * 0.8).min(0.7) } else { 0. };
         knight(
             &mut a,
-            p,
-            e.facing,
-            if e.boss() { 2.35 } else { 1.05 },
-            time + i as f32,
-            move_speed,
-            action,
-            ph,
-            false,
+            p - Vec3::Y * sink,
+            crate::dented_motion::yaw_lerp(olde.facing, e.facing, alpha),
+            if e.boss() { 2.2 } else { 1.05 },
+            g.time + i as f32,
+            e.motion.speed / 3.,
+            &pose,
             Some(e.kind),
             e.flash,
             e.boss(),
+            false,
         );
         if e.intent == Intent::Windup {
             let radius = if e.boss() && e.attack == 1 { e.reach() * phase.max(0.08) } else { 0.85 };
@@ -571,6 +713,7 @@ pub fn emit(
             a.ring(p + Vec3::Y * 0.07, 0.65, 0.04, "#c8e1d8", 0.6, false);
         }
     }
+    impacts(&mut a, g);
     for bolt in &g.bolts {
         a.sphere(bolt.pos, Vec3::splat(0.25), "#8edab6", 1.8);
         a.beam(bolt.pos, bolt.pos - bolt.vel * 0.09, 0.045, "#c5e8bb");

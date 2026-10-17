@@ -298,7 +298,7 @@ pub fn draw(
                     ink.text(850., y, key, 20., GOLD, false);
                     ink.text(1070., y, desc, 24., IVORY, false);
                 }
-                ink.text(104., 650., "Watch the windup. Spend stamina with intent. Strike during recovery.", 25., IVORY, true);
+                ink.text(104., 650., "Chain three light strikes. Evade after contact. Parry, then punish.", 25., IVORY, true);
                 ink.text(
                     104.,
                     695.,

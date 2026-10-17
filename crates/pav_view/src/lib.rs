@@ -6,6 +6,7 @@ pub mod build;
 pub mod camera;
 pub mod creatures;
 pub mod dented;
+mod dented_motion;
 pub mod fx;
 pub mod look;
 pub mod materials;
